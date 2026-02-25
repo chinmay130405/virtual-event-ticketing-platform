@@ -1,0 +1,330 @@
+/**
+ * Admin Dashboard Styles
+ */
+
+.admin-dashboard {
+  min-height: calc(100vh - 80px);
+  padding: 40px 0;
+  background: var(--light-color);
+}
+
+.admin-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.admin-header h1 {
+  font-size: 32px;
+  color: var(--dark-color);
+  margin-bottom: 8px;
+}
+
+.admin-header p {
+  color: var(--text-color);
+  font-size: 16px;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 15px;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-color);
+  transition: all 0.3s;
+  border-bottom: 3px solid transparent;
+  position: relative;
+  bottom: -15px;
+}
+
+.tab-btn:hover {
+  color: var(--primary-color);
+}
+
+.tab-btn.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: all 0.3s;
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.stat-icon {
+  font-size: 32px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--light-color);
+  border-radius: 8px;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-color);
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* Recent Orders */
+.recent-orders,
+.top-events {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  margin-bottom: 30px;
+}
+
+.recent-orders h2,
+.top-events h2 {
+  font-size: 20px;
+  color: var(--dark-color);
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.orders-table {
+  overflow-x: auto;
+}
+
+.orders-table table,
+.users-table table,
+.analytics-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.orders-table thead,
+.users-table thead,
+.analytics-table thead {
+  background: var(--light-color);
+}
+
+.orders-table th,
+.users-table th,
+.analytics-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.orders-table td,
+.users-table td,
+.analytics-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.orders-table tbody tr:hover,
+.users-table tbody tr:hover,
+.analytics-table tbody tr:hover {
+  background: var(--light-color);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-confirmed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Events List */
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: var(--light-color);
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.event-row:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.event-info {
+  flex: 1;
+}
+
+.event-name {
+  font-weight: 600;
+  color: var(--dark-color);
+  margin-bottom: 5px;
+}
+
+.event-meta {
+  font-size: 12px;
+  color: var(--text-color);
+}
+
+.event-revenue {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* Users Table */
+.users-content,
+.analytics-content {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.users-content h2,
+.analytics-content h2 {
+  font-size: 20px;
+  color: var(--dark-color);
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--light-color);
+  color: var(--text-color);
+}
+
+.role-badge.admin {
+  background: #dbeafe;
+  color: #0c2340;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-small:hover {
+  background: #4f46e5;
+}
+
+/* Analytics */
+.progress-mini {
+  width: 60px;
+  height: 6px;
+  background: var(--light-color);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+}
+
+.revenue {
+  font-weight: 600;
+  color: var(--primary-color) !important;
+}
+
+@media (max-width: 768px) {
+  .admin-header h1 {
+    font-size: 24px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .stat-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .admin-tabs {
+    flex-wrap: wrap;
+  }
+
+  .orders-table,
+  .users-table,
+  .analytics-table {
+    font-size: 12px;
+  }
+
+  .event-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
