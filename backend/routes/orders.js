@@ -14,6 +14,7 @@ const {
   updateOrderStatus,
   downloadTicket,
   getOrderStats,
+  verifyNeftPayment,
 } = require('../controllers/orderController');
 
 // Protected user routes
@@ -26,6 +27,7 @@ router.get('/:orderId/tickets/:ticketId/download', protect, downloadTicket);
 // Protected admin routes
 router.get('/', protect, admin, getAllOrders);
 router.put('/:id/status', protect, admin, updateOrderStatus);
+router.put('/:id/verify-neft', protect, admin, verifyNeftPayment);
 router.get('/admin/stats', protect, admin, getOrderStats);
 
 module.exports = router;

@@ -5,13 +5,10 @@
 
 const sendTicketConfirmation = async (email, orderData) => {
   try {
-    // In production, use nodemailer or email service
-    // For now, we'll just log it
     console.log('📧 Email would be sent to:', email);
     console.log('📧 Subject: Your Event Ticket Confirmation');
     console.log('📧 Order Details:', orderData);
 
-    // Mock email template
     const emailContent = `
       Dear ${orderData.attendeeName},
 
@@ -48,4 +45,35 @@ const sendTicketConfirmation = async (email, orderData) => {
   }
 };
 
-module.exports = { sendTicketConfirmation };
+const sendRefundConfirmation = async (email, orderData) => {
+  try {
+    console.log('📧 Refund email would be sent to:', email);
+    console.log('📧 Subject: Your Refund Confirmation');
+    console.log('📧 Refund Order Details:', orderData);
+
+    const emailContent = `
+      Dear Customer,
+
+      Your refund has been processed successfully.
+
+      Order Number: ${orderData.orderNumber}
+      Refunded Amount: ₹${orderData.totalAmount}
+      Refund Date: ${new Date(orderData.refundedAt).toLocaleDateString()}
+
+      The refunded amount will be credited back to your original payment method within 5-7 business days.
+
+      If you have any questions, please contact our support team.
+
+      Best regards,
+      Virtual Event Ticketing Team
+    `;
+
+    console.log('📧 Refund Email Body:', emailContent);
+    return true;
+  } catch (error) {
+    console.error('Refund email error:', error);
+    return false;
+  }
+};
+
+module.exports = { sendTicketConfirmation, sendRefundConfirmation };

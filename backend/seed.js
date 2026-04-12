@@ -180,37 +180,21 @@ const demoEvents = [
 
 async function seedDatabase() {
   try {
-    // Connect to MongoDB
     await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
     console.log('✅ Connected to MongoDB');
 
-    // Clear existing events and users
     await Event.deleteMany({});
     console.log('🗑️  Cleared existing events');
 
-    // Create or find admin user
-    let adminUser = await User.findOne({ email: 'admin@example.com' });
-    
-    if (!adminUser) {
-      adminUser = await User.create({
-        name: 'Admin User',
-        email: 'admin@example.com',
-        password: 'admin123456', // Will be hashed by pre-hook
-        phone: '1234567890',
-        isAdmin: true,
-      });
-      console.log('✅ Created admin user');
-    } else {
-      console.log('✅ Using existing admin user');
-    }
+    const adminUser = await User.findOne({ isAdmin: true });
+    const createdBy = adminUser ? adminUser._id : new mongoose.Types.ObjectId('000000000000000000000001');
 
-    // Add createdBy to all events
     const eventsWithCreatedBy = demoEvents.map(event => ({
       ...event,
-      createdBy: adminUser._id,
+      createdBy,
     }));
 
     // Insert demo events
@@ -224,9 +208,7 @@ async function seedDatabase() {
     });
 
     console.log('\n✨ Database seeding completed successfully!');
-    console.log('\n🔐 Admin Credentials:');
-    console.log('   Email: admin@example.com');
-    console.log('   Password: admin123456');
+    console.log('\n📝 Note: Admin account should be configured via server startup or .env');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error.message);

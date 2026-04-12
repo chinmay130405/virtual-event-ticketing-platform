@@ -16,6 +16,14 @@ exports.getCart = async (req, res, next) => {
 
     if (!cart) {
       cart = await Cart.create({ user: req.user.id, items: [], totalPrice: 0 });
+    } else {
+      // Clean up invalid items (e.g. if an event was deleted from DB)
+      const validItems = cart.items.filter(item => item.event != null);
+      if (validItems.length !== cart.items.length) {
+        cart.items = validItems;
+        cart.calculateTotal();
+        await cart.save();
+      }
     }
 
     res.status(200).json({

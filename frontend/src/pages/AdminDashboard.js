@@ -4,6 +4,7 @@ import adminService from '../services/adminService';
 import inventoryService from '../services/inventoryService';
 import crmService from '../services/crmService';
 import erpService from '../services/erpService';
+import orderService from '../services/orderService';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [analytics, setAnalytics] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [neftOrders, setNeftOrders] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,6 +66,10 @@ const AdminDashboard = () => {
         setAnalytics(response.analytics);
       } else if (activeTab === 'orders') {
         await fetchOrders();
+      } else if (activeTab === 'neft') {
+        const response = await adminService.getAllOrders({ paymentStatus: 'pending' }, token);
+        const filteredOrders = response.orders.filter(order => order.paymentMethod === 'neft');
+        setNeftOrders(filteredOrders);
       } else if (activeTab === 'inventory') {
         const response = await inventoryService.getInventoryOverview(token);
         setInventory(response.inventory);
@@ -121,6 +127,20 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleVerifyNeft = async (orderId, action) => {
+    try {
+      setError('');
+      setSuccessMsg('');
+      const token = localStorage.getItem('token');
+      const response = await orderService.verifyNeft(orderId, action, token);
+      setSuccessMsg(response.message);
+      setActiveTab('orders');
+      await fetchOrders();
+    } catch (err) {
+      setError(err.message || 'Failed to verify NEFT payment');
+    }
+  };
+
   const handleAdjustInventory = async (eventId) => {
     try {
       setError('');
@@ -154,6 +174,7 @@ const AdminDashboard = () => {
   const tabs = [
     ['dashboard', 'Dashboard'],
     ['orders', 'Orders'],
+    ['neft', 'NEFT Verification'],
     ['inventory', 'Inventory'],
     ['users', 'Users'],
     ['analytics', 'Analytics'],
@@ -171,19 +192,29 @@ const AdminDashboard = () => {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
-          {tabs.map(([value, label]) => (
-            <button
-              key={value}
-              onClick={() => setActiveTab(value)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                activeTab === value
-                  ? 'bg-primary text-white'
-                  : 'border border-white/15 bg-surface text-slate-300 hover:border-primary/40'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          {tabs.map(([value, label]) => {
+            const pendingCount = value === 'neft' 
+              ? neftOrders.filter(o => o.neftVerificationStatus === 'pending').length 
+              : 0;
+            return (
+              <button
+                key={value}
+                onClick={() => setActiveTab(value)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                  activeTab === value
+                    ? 'bg-primary text-white'
+                    : 'border border-white/15 bg-surface text-slate-300 hover:border-primary/40'
+                }`}
+              >
+                {label}
+                {value === 'neft' && pendingCount > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-black">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {error && (
@@ -347,26 +378,23 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-4 py-3">{order.tickets?.length || 0}</td>
                             <td className="px-4 py-3 font-bold text-white">₹{order.totalAmount.toFixed(2)}</td>
-                            <td className="px-4 py-3 uppercase text-xs">{order.paymentStatus}</td>
+                            <td className="px-4 py-3 font-bold text-white">₹{order.totalAmount.toFixed(2)}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col items-start gap-1">
+                                <span className="uppercase text-xs">{order.paymentStatus}</span>
+                              </div>
+                            </td>
                             <td className="px-4 py-3 uppercase text-xs">{order.orderStatus}</td>
                             <td className="px-4 py-3">{new Date(order.createdAt).toLocaleDateString()}</td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-2">
                                 {order.orderStatus === 'confirmed' && (
-                                  <>
-                                    <button
-                                      className="rounded-md border border-amber-400/30 px-2 py-1 text-xs text-amber-300 hover:bg-amber-400/10"
-                                      onClick={() => handleUpdateOrderStatus(order._id, 'cancelled')}
-                                    >
-                                      Cancel
-                                    </button>
-                                    <button
-                                      className="rounded-md border border-red-400/30 px-2 py-1 text-xs text-red-300 hover:bg-red-400/10"
-                                      onClick={() => handleUpdateOrderStatus(order._id, 'refunded')}
-                                    >
-                                      Refund
-                                    </button>
-                                  </>
+                                  <button
+                                    className="rounded-md border border-red-400/30 px-2 py-1 text-xs text-red-300 hover:bg-red-400/10"
+                                    onClick={() => handleUpdateOrderStatus(order._id, 'refunded')}
+                                  >
+                                    Refund
+                                  </button>
                                 )}
                                 {(order.orderStatus === 'cancelled' ||
                                   order.orderStatus === 'refunded') && (
@@ -385,6 +413,97 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'neft' && (
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-center">
+                    <p className="text-2xl font-black text-amber-300">
+                      {neftOrders.filter((o) => o.neftVerificationStatus === 'pending').length}
+                    </p>
+                    <p className="text-sm text-slate-400">Pending</p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-center">
+                    <p className="text-2xl font-black text-emerald-300">
+                      {neftOrders.filter((o) => o.neftVerificationStatus === 'verified').length}
+                    </p>
+                    <p className="text-sm text-slate-400">Verified</p>
+                  </div>
+                  <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-center">
+                    <p className="text-2xl font-black text-red-300">
+                      {neftOrders.filter((o) => o.neftVerificationStatus === 'rejected').length}
+                    </p>
+                    <p className="text-sm text-slate-400">Rejected</p>
+                  </div>
+                </div>
+
+                {neftOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                    <span className="material-symbols-outlined text-4xl mb-2">receipt_long</span>
+                    <p>No NEFT orders found.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-white/10 bg-surface">
+                    <table className="min-w-full text-sm">
+                      <thead className="text-slate-400">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Order #</th>
+                          <th className="px-4 py-3 text-left">Customer</th>
+                          <th className="px-4 py-3 text-left">Amount</th>
+                          <th className="px-4 py-3 text-left">UTR / Reference No.</th>
+                          <th className="px-4 py-3 text-left">Submitted</th>
+                          <th className="px-4 py-3 text-left">Status</th>
+                          <th className="px-4 py-3 text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {neftOrders.map((order) => (
+                          <tr key={order._id} className="border-t border-white/5 text-slate-200">
+                            <td className="px-4 py-3 font-semibold">{order.orderNumber}</td>
+                            <td className="px-4 py-3">
+                              <p>{order.user?.name}</p>
+                              <p className="text-xs text-slate-400">{order.user?.email}</p>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-white">₹{order.totalAmount.toFixed(2)}</td>
+                            <td className="px-4 py-3 font-mono text-xs">{order.neftReferenceNumber}</td>
+                            <td className="px-4 py-3">{new Date(order.createdAt).toLocaleDateString()}</td>
+                            <td className="px-4 py-3">
+                              <span className={`rounded-full border px-2 py-1 text-xs ${
+                                order.neftVerificationStatus === 'pending' 
+                                  ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
+                                  : order.neftVerificationStatus === 'verified'
+                                  ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                                  : 'border-red-400/30 bg-red-500/10 text-red-300'
+                              }`}>
+                                {order.neftVerificationStatus}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {order.neftVerificationStatus === 'pending' && (
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    className="rounded-md border border-emerald-400/30 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-400/10"
+                                    onClick={() => handleVerifyNeft(order._id, 'verify')}
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    className="rounded-md border border-red-400/30 px-2 py-1 text-xs text-red-300 hover:bg-red-400/10"
+                                    onClick={() => handleVerifyNeft(order._id, 'reject')}
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 

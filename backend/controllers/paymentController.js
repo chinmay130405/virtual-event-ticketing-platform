@@ -57,11 +57,20 @@ exports.createOrder = async (req, res, next) => {
       key_secret: RAZORPAY_KEY_SECRET,
     });
 
-    const order = await razorpay.orders.create({
-      amount: amountInPaise,
-      currency: 'INR',
-      receipt: `rcpt_${Date.now()}`,
-    });
+    let order;
+    try {
+      order = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: 'INR',
+        receipt: `rcpt_${Date.now()}`,
+      });
+    } catch (rzpErr) {
+      console.error('Razorpay API Error:', rzpErr);
+      return res.status(500).json({
+        success: false,
+        message: 'Razorpay API Error: ' + (rzpErr.error?.description || rzpErr.message || 'Verification Failed'),
+      });
+    }
 
     res.status(200).json({
       success: true,

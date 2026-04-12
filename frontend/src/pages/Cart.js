@@ -90,14 +90,17 @@ const Cart = () => {
         ) : (
           <div className="grid gap-8 lg:grid-cols-3">
             <div className="space-y-4 lg:col-span-2">
-              {cart.items.map((item) => (
+              {cart.items.map((item) => {
+                if (!item.event) return null; // Skip invalid or deleted events
+                
+                return (
                 <div
                   key={item.event._id}
                   className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-surface p-5 md:flex-row md:items-center"
                 >
                   <img
-                    src={item.event.bannerImage}
-                    alt={item.event.title}
+                    src={item.event.bannerImage || 'https://via.placeholder.com/150'}
+                    alt={item.event.title || 'Event'}
                     className="h-28 w-full rounded-xl object-cover md:w-40"
                   />
                   <div className="flex-1">
@@ -134,7 +137,8 @@ const Cart = () => {
                     Remove
                   </button>
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             <div className="h-fit rounded-2xl border border-white/10 bg-surface p-6 lg:sticky lg:top-28">

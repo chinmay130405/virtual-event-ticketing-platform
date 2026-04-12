@@ -70,6 +70,22 @@ const orderService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Verify NEFT payment (Admin)
+  verifyNeft: async (orderId, action, token) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/${orderId}/verify-neft`,
+        { action },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default orderService;

@@ -66,12 +66,48 @@ const Checkout = () => {
     country: 'India',
   });
 
+  const [paymentMethod, setPaymentMethod] = useState('razorpay');
+  const [neftReferenceNumber, setNeftReferenceNumber] = useState('');
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleNeftSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError('');
+      setPaymentStatus('Processing NEFT bank transfer order...');
+      const token = localStorage.getItem('token');
+
+      const checkoutPayload = {
+        attendeeName: formData.attendeeName,
+        attendeeEmail: formData.attendeeEmail,
+        attendeePhone: formData.attendeePhone,
+        billingAddress: {
+          street: formData.street,
+          city: formData.city,
+          state: formData.stateZip,
+          postalCode: formData.stateZip,
+          country: formData.country,
+        },
+        paymentMethod: 'neft',
+        neftReferenceNumber: neftReferenceNumber,
+      };
+
+      const checkoutRes = await orderService.checkout(checkoutPayload, token);
+      await cartService.clearCart(token);
+      navigate(`/order-confirmation/${checkoutRes.order._id}`);
+    } catch (err) {
+      setError(err.message || err?.message || 'NEFT checkout failed');
+      setLoading(false);
+      setPaymentStatus('');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -348,21 +384,105 @@ const Checkout = () => {
                    <span className="material-symbols-outlined text-primary">payments</span>
                    <h2 className="text-xl font-bold text-white">Payment Method</h2>
                 </div>
-                <div className="mb-8 rounded-lg border border-primary/40 bg-primary/10 p-4 text-center">
-                    <p className="text-slate-300">Proceed to standard checkout via Razorpay (UPI, Credit Cards, Wallets securely supported)</p>
+
+                <div className="mb-6 grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('razorpay')}
+                    className={`flex flex-col items-center justify-center rounded-xl border p-4 transition-all ${
+                      paymentMethod === 'razorpay'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-white/10 text-slate-400 hover:border-white/30'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-2xl mb-2">onlinePayments</span>
+                    <span className="font-bold text-sm">Online Checkout</span>
+                    <span className="text-xs text-slate-500">(Razorpay)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('neft')}
+                    className={`flex flex-col items-center justify-center rounded-xl border p-4 transition-all ${
+                      paymentMethod === 'neft'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-white/10 text-slate-400 hover:border-white/30'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-2xl mb-2">accountBalance</span>
+                    <span className="font-bold text-sm">Bank Transfer</span>
+                    <span className="text-xs text-slate-500">(NEFT)</span>
+                  </button>
                 </div>
 
-                <button
-                  className="mb-4 w-full rounded-full bg-primary py-4 text-lg font-black text-white shadow-[0_0_20px_rgba(233,32,143,0.3)] transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                  type="submit"
-                  disabled={loading}
-                >
-                  {loading ? 'Processing...' : `Pay ₹${orderTotal.toFixed(2)}`}
-                </button>
+                {paymentMethod === 'neft' && (
+                  <div className="mb-6 rounded-lg border border-amber-400/30 bg-amber-500/10 p-4">
+                    <div className="mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-amber-400">info</span>
+                      <h3 className="font-bold text-amber-200">Bank Transfer Details</h3>
+                    </div>
+                    <div className="mb-4 space-y-2 text-sm text-slate-300">
+                      <p><span className="font-semibold">Bank Name:</span> State Bank of India</p>
+                      <p><span className="font-semibold">Account Number:</span> 1234567890</p>
+                      <p><span className="font-semibold">IFSC Code:</span> SBIN0001234</p>
+                      <p><span className="font-semibold">Account Name:</span> Virtual Events Pvt Ltd</p>
+                    </div>
+                    <div className="mb-2">
+                      <label className="mb-2 block text-xs font-bold uppercase text-slate-400">
+                        UTR / Reference Number
+                      </label>
+                      <input
+                        className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition-all focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                        type="text"
+                        name="neftReferenceNumber"
+                        value={neftReferenceNumber}
+                        onChange={(e) => setNeftReferenceNumber(e.target.value)}
+                        placeholder="Enter your UTR number after transfer"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Please transfer the exact amount to the above account and enter your UTR number to verify the payment.
+                    </p>
+                  </div>
+                )}
+
+                {paymentMethod === 'razorpay' && (
+                  <div className="mb-8 rounded-lg border border-primary/40 bg-primary/10 p-4 text-center">
+                      <p className="text-slate-300">Proceed to standard checkout via Razorpay (UPI, Credit Cards, Wallets securely supported)</p>
+                  </div>
+                )}
+
+                {paymentMethod === 'neft' ? (
+                  <button
+                    className="mb-4 w-full rounded-full bg-amber-500 py-4 text-lg font-black text-black shadow-[0_0_20px_rgba(233,32,143,0.3)] transition-all hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    type="button"
+                    onClick={handleNeftSubmit}
+                    disabled={loading || !neftReferenceNumber}
+                  >
+                    {loading ? 'Processing...' : `Place Order (Pay ₹${orderTotal.toFixed(2)})`}
+                  </button>
+                ) : (
+                  <button
+                    className="mb-4 w-full rounded-full bg-primary py-4 text-lg font-black text-white shadow-[0_0_20px_rgba(233,32,143,0.3)] transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? 'Processing...' : `Pay ₹${orderTotal.toFixed(2)}`}
+                  </button>
+                )}
 
                 <p className="flex items-center justify-center gap-2 text-center text-sm text-slate-500">
-                  <span className="material-symbols-outlined text-xs">lock</span>
-                  Your payment is secured with 256-bit SSL encryption via Razorpay
+                  {paymentMethod === 'razorpay' ? (
+                    <>
+                      <span className="material-symbols-outlined text-xs">lock</span>
+                      Your payment is secured with 256-bit SSL encryption via Razorpay
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-xs">info</span>
+                      Payment will be verified by admin after UTR confirmation
+                    </>
+                  )}
                 </p>
               </form>
             </div>

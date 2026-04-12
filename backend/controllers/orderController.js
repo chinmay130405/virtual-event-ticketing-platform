@@ -8,7 +8,7 @@ const Cart = require('../models/Cart');
 const Event = require('../models/Event');
 const Order = require('../models/Order');
 const User = require('../models/User');
-const { sendTicketConfirmation } = require('../utils/email');
+const { sendTicketConfirmation, sendRefundConfirmation } = require('../utils/email');
 
 /**
  * Create order from cart (Checkout)
@@ -25,9 +25,9 @@ exports.checkout = async (req, res, next) => {
       razorpayPaymentId,
       razorpayOrderId,
       razorpaySignature,
+      neftReferenceNumber,
     } = req.body;
 
-    // Validation
     if (!attendeeEmail || !attendeeName) {
       return res.status(400).json({
         success: false,
@@ -35,14 +35,22 @@ exports.checkout = async (req, res, next) => {
       });
     }
 
-    if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+    const isNeft = paymentMethod === 'neft';
+
+    if (!isNeft && (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature)) {
       return res.status(400).json({
         success: false,
         message: 'Please provide Razorpay payment details',
       });
     }
 
-    // Get user's cart
+    if (isNeft && !neftReferenceNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide NEFT reference number (UTR)',
+      });
+    }
+
     const cart = await Cart.findOne({ user: req.user.id }).populate('items.event');
 
     if (!cart || cart.items.length === 0) {
@@ -52,33 +60,34 @@ exports.checkout = async (req, res, next) => {
       });
     }
 
-    const { RAZORPAY_KEY_SECRET } = process.env;
+    if (!isNeft) {
+      const { RAZORPAY_KEY_SECRET } = process.env;
 
-    if (!RAZORPAY_KEY_SECRET) {
-      return res.status(500).json({
-        success: false,
-        message: 'Razorpay key secret is not configured',
-      });
+      if (!RAZORPAY_KEY_SECRET) {
+        return res.status(500).json({
+          success: false,
+          message: 'Razorpay key secret is not configured',
+        });
+      }
+
+      const generatedSignature = crypto
+        .createHmac('sha256', RAZORPAY_KEY_SECRET)
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest('hex');
+
+      const hasSameLength = generatedSignature.length === razorpaySignature.length;
+      const isSignatureValid =
+        hasSameLength &&
+        crypto.timingSafeEqual(Buffer.from(generatedSignature), Buffer.from(razorpaySignature));
+
+      if (!isSignatureValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid Razorpay payment signature',
+        });
+      }
     }
 
-    const generatedSignature = crypto
-      .createHmac('sha256', RAZORPAY_KEY_SECRET)
-      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-      .digest('hex');
-
-    const hasSameLength = generatedSignature.length === razorpaySignature.length;
-    const isSignatureValid =
-      hasSameLength &&
-      crypto.timingSafeEqual(Buffer.from(generatedSignature), Buffer.from(razorpaySignature));
-
-    if (!isSignatureValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid Razorpay payment signature',
-      });
-    }
-
-    // Check ticket availability and prepare tickets
     const tickets = [];
     const orderData = {
       user: req.user.id,
@@ -87,17 +96,18 @@ exports.checkout = async (req, res, next) => {
       attendeePhone: attendeePhone || '',
       billingAddress: billingAddress || {},
       paymentMethod: paymentMethod || 'razorpay',
-      razorpayOrderId,
-      razorpayPaymentId,
+      razorpayOrderId: razorpayOrderId || '',
+      razorpayPaymentId: razorpayPaymentId || '',
+      neftReferenceNumber: neftReferenceNumber || '',
+      neftVerificationStatus: isNeft ? 'pending' : undefined,
       totalAmount: 0,
-      paymentStatus: 'completed',
-      orderStatus: 'confirmed',
+      paymentStatus: isNeft ? 'pending' : 'completed',
+      orderStatus: isNeft ? 'pending' : 'confirmed',
     };
 
     for (const item of cart.items) {
       const event = item.event;
 
-      // Check availability
       const availableTickets = event.ticketsAvailable - event.ticketsSold;
       if (item.quantity > availableTickets) {
         return res.status(400).json({
@@ -106,7 +116,6 @@ exports.checkout = async (req, res, next) => {
         });
       }
 
-      // Create ticket entries
       for (let i = 0; i < item.quantity; i++) {
         tickets.push({
           event: event._id,
@@ -117,26 +126,23 @@ exports.checkout = async (req, res, next) => {
         });
       }
 
-      // Update tickets sold
-      event.ticketsSold += item.quantity;
-      await event.save();
+      if (!isNeft) {
+        event.ticketsSold += item.quantity;
+        await event.save();
+      }
 
-      // Calculate total
       orderData.totalAmount += event.price * item.quantity;
     }
 
     orderData.tickets = tickets;
 
-    // Create order
     const order = await Order.create(orderData);
 
-    // Update user CRM data (totalSpent and loyaltyPoints)
-    const pointsEarned = Math.floor(orderData.totalAmount); // 1 point per dollar spent
+    const pointsEarned = Math.floor(orderData.totalAmount);
     await User.findByIdAndUpdate(req.user.id, {
       $inc: { totalSpent: orderData.totalAmount, loyaltyPoints: pointsEarned },
     });
 
-    // Send confirmation email (mock)
     await sendTicketConfirmation(attendeeEmail, {
       orderNumber: order.orderNumber,
       attendeeName,
@@ -144,14 +150,13 @@ exports.checkout = async (req, res, next) => {
       tickets: order.tickets,
     });
 
-    // Clear cart
     cart.items = [];
     cart.totalPrice = 0;
     await cart.save();
 
     res.status(201).json({
       success: true,
-      message: 'Order created successfully',
+      message: isNeft ? 'Order created successfully. Payment pending NEFT verification.' : 'Order created successfully',
       order,
     });
   } catch (error) {
@@ -365,12 +370,85 @@ exports.updateOrderStatus = async (req, res, next) => {
     if (status === 'refunded') {
       order.refundedAt = new Date();
       order.paymentStatus = 'failed';
+      await sendRefundConfirmation(order.attendeeEmail, {
+        orderNumber: order.orderNumber,
+        totalAmount: order.totalAmount,
+        refundedAt: order.refundedAt,
+      });
     }
     await order.save();
 
     res.status(200).json({
       success: true,
       message: `Order status updated to ${status}`,
+      order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Verify NEFT payment (Admin only)
+ * PUT /api/orders/:id/verify-neft
+ */
+exports.verifyNeftPayment = async (req, res, next) => {
+  try {
+    const { action } = req.body;
+
+    if (!action || !['verify', 'reject'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid action. Must be "verify" or "reject".',
+      });
+    }
+
+    const order = await Order.findById(req.params.id).populate('tickets.event');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    if (order.paymentMethod !== 'neft') {
+      return res.status(400).json({
+        success: false,
+        message: 'This order is not a NEFT payment',
+      });
+    }
+
+    if (order.neftVerificationStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `NEFT verification already ${order.neftVerificationStatus}`,
+      });
+    }
+
+    if (action === 'verify') {
+      order.paymentStatus = 'completed';
+      order.orderStatus = 'confirmed';
+      order.neftVerificationStatus = 'verified';
+
+      for (const ticket of order.tickets) {
+        const event = await Event.findById(ticket.event);
+        if (event) {
+          event.ticketsSold += ticket.quantity;
+          await event.save();
+        }
+      }
+    } else {
+      order.paymentStatus = 'failed';
+      order.orderStatus = 'cancelled';
+      order.neftVerificationStatus = 'rejected';
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: action === 'verify' ? 'NEFT payment verified successfully' : 'NEFT payment rejected',
       order,
     });
   } catch (error) {

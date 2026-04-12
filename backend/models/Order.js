@@ -41,7 +41,7 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ['confirmed', 'cancelled', 'refunded'],
+      enum: ['confirmed', 'cancelled', 'refunded', 'pending'],
       default: 'confirmed',
     },
     refundedAt: {
@@ -73,7 +73,7 @@ const orderSchema = new mongoose.Schema(
     // Payment info
     paymentMethod: {
       type: String,
-      enum: ['credit_card', 'debit_card', 'paypal', 'razorpay'],
+      enum: ['credit_card', 'debit_card', 'paypal', 'razorpay', 'neft'],
       default: 'razorpay',
     },
     razorpayOrderId: {
@@ -83,6 +83,15 @@ const orderSchema = new mongoose.Schema(
     razorpayPaymentId: {
       type: String,
       default: '',
+    },
+    neftReferenceNumber: {
+      type: String,
+      default: '',
+    },
+    neftVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
     },
     notes: String,
     referralSource: {

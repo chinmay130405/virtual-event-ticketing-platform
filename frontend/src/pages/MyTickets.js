@@ -138,7 +138,11 @@ const MyTickets = () => {
                   </div>
 
                   <div>
-                    <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase text-primary">
+                    <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase ${
+                      order.orderStatus === 'refunded'
+                        ? 'border-red-400/30 bg-red-500/10 text-red-300'
+                        : 'border-primary/30 bg-primary/10 text-primary'
+                    }`}>
                       {order.orderStatus.toUpperCase()}
                     </span>
                   </div>
@@ -189,6 +193,15 @@ const MyTickets = () => {
                     <span>Payment Status</span>
                     <span className="font-semibold capitalize text-white">{order.paymentStatus}</span>
                   </div>
+
+                  {order.orderStatus === 'refunded' && order.refundedAt && (
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span>Refunded On</span>
+                      <span className="font-semibold text-red-300">
+                        {new Date(order.refundedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
