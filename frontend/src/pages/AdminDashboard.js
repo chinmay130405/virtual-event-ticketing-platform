@@ -32,18 +32,6 @@ const AdminDashboard = () => {
   const [erpExpenses, setErpExpenses] = useState([]);
   const [erpResources, setErpResources] = useState([]);
 
-  const [marketingStats, setMarketingStats] = useState({
-    totalSubscribers: 1248,
-    conversionRate: 4.2,
-    trafficSources: [
-      { source: 'Facebook Ads', visits: 3420, conversions: 156 },
-      { source: 'Twitter Organic', visits: 2150, conversions: 89 },
-      { source: 'Email Campaigns', visits: 1800, conversions: 124 },
-      { source: 'Direct', visits: 980, conversions: 42 },
-      { source: 'Google Search', visits: 750, conversions: 31 },
-    ],
-  });
-
   useEffect(() => {
     fetchDashboardData();
   }, [activeTab]);
@@ -178,7 +166,6 @@ const AdminDashboard = () => {
     ['inventory', 'Inventory'],
     ['users', 'Users'],
     ['analytics', 'Analytics'],
-    ['marketing', 'Marketing'],
     ['crm', 'CRM'],
     ['erp', 'ERP'],
   ];
@@ -669,99 +656,6 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
-
-            {activeTab === 'marketing' && (
-              <div className="space-y-8">
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-xl border border-white/10 bg-surface p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="material-symbols-outlined text-2xl text-primary">group</span>
-                      <p className="text-sm text-slate-400">Total Subscribers</p>
-                    </div>
-                    <p className="text-3xl font-black text-white">{marketingStats.totalSubscribers.toLocaleString()}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/10 bg-surface p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="material-symbols-outlined text-2xl text-emerald-400">trending_up</span>
-                      <p className="text-sm text-slate-400">Conversion Rate</p>
-                    </div>
-                    <p className="text-3xl font-black text-emerald-400">{marketingStats.conversionRate}%</p>
-                  </div>
-                  <div className="rounded-xl border border-white/10 bg-surface p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="material-symbols-outlined text-2xl text-amber-400">campaign</span>
-                      <p className="text-sm text-slate-400">Active Campaigns</p>
-                    </div>
-                    <p className="text-3xl font-black text-amber-400">3</p>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-surface p-6">
-                  <h3 className="text-xl font-bold text-white mb-6">Traffic by Source</h3>
-                  <div className="space-y-4">
-                    {marketingStats.trafficSources.map((source, index) => {
-                      const maxVisits = Math.max(...marketingStats.trafficSources.map(s => s.visits));
-                      const percentage = (source.visits / maxVisits) * 100;
-                      return (
-                        <div key={source.source} className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium text-white">{source.source}</span>
-                            <span className="text-slate-400">{source.visits.toLocaleString()} visits · {source.conversions} conversions</span>
-                          </div>
-                          <div className="h-3 bg-black/40 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full"
-                              style={{ width: `${percentage}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-surface p-6">
-                    <h3 className="text-lg font-bold text-white mb-4">Top Performing Campaigns</h3>
-                    <div className="space-y-3">
-                      {[
-                        { name: 'Summer Event Pass', conversions: 156, revenue: '₹45,200' },
-                        { name: 'Black Friday Early Bird', conversions: 124, revenue: '₹38,500' },
-                        { name: 'Email Retargeting', conversions: 89, revenue: '₹22,100' },
-                      ].map((campaign, i) => (
-                        <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-black/40 border border-white/5">
-                          <div>
-                            <p className="font-medium text-white">{campaign.name}</p>
-                            <p className="text-xs text-slate-400">{campaign.conversions} conversions</p>
-                          </div>
-                          <p className="font-bold text-emerald-400">{campaign.revenue}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-surface p-6">
-                    <h3 className="text-lg font-bold text-white mb-4">Recent Newsletter Activity</h3>
-                    <div className="space-y-3">
-                      {[
-                        { date: 'Today', newSubs: 24, unsubs: 2 },
-                        { date: 'Yesterday', newSubs: 31, unsubs: 1 },
-                        { date: '2 days ago', newSubs: 18, unsubs: 3 },
-                        { date: '3 days ago', newSubs: 45, unsubs: 5 },
-                      ].map((day, i) => (
-                        <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-black/40 border border-white/5">
-                          <span className="text-sm text-slate-300">{day.date}</span>
-                          <div className="flex gap-4 text-sm">
-                            <span className="text-emerald-400">+{day.newSubs} new</span>
-                            <span className="text-red-400">-{day.unsubs}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
