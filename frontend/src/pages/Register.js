@@ -34,7 +34,11 @@ const Register = () => {
       setLoading(true);
       setError('');
       await register(formData);
-      navigate('/');
+      if (formData.role === 'organizer') {
+        navigate('/organizer');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err.message || 'Registration failed');
     } finally {

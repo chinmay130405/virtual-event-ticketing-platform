@@ -7,6 +7,7 @@ const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const { normalizeRole, getPublicRegistrationRole } = require('../utils/roles');
 const { validateOrganizerRegistration } = require('../utils/organizerVerification');
+const { verifyOrganizerAuthenticity } = require('../utils/organizerAuthenticity');
 
 /**
  * Register a new user
@@ -250,6 +251,13 @@ exports.registerOrganizer = async (req, res, next) => {
       });
     }
 
+    const authenticity = await verifyOrganizerAuthenticity({
+      companyName,
+      gstNumber,
+      businessAddress,
+      venueRegistration,
+    });
+
     user = await User.create({
       name,
       email: email.toLowerCase(),
@@ -261,14 +269,26 @@ exports.registerOrganizer = async (req, res, next) => {
       gstNumber: String(gstNumber).trim().toUpperCase(),
       businessAddress: String(businessAddress).trim(),
       venueRegistration: venueRegistration ? String(venueRegistration).trim() : '',
-      verificationStatus: 'pending',
+      verificationStatus:
+        authenticity.recommendedStatus === 'approved'
+          ? 'approved'
+          : authenticity.recommendedStatus === 'rejected'
+            ? 'rejected'
+            : 'pending',
+      verificationReason: authenticity.reasons.length ? authenticity.reasons.join('; ') : '',
+      verifiedAt: authenticity.recommendedStatus === 'approved' ? new Date() : null,
     });
 
     const token = generateToken(user._id, user.role);
 
     res.status(201).json({
       success: true,
-      message: 'Organizer registration submitted. Awaiting approval.',
+      message:
+        authenticity.recommendedStatus === 'approved'
+          ? 'Organizer registration approved automatically.'
+          : authenticity.recommendedStatus === 'rejected'
+            ? 'Organizer registration rejected. Please contact support.'
+            : 'Organizer registration submitted. Awaiting approval.',
       token,
       user: {
         id: user._id,
@@ -277,7 +297,9 @@ exports.registerOrganizer = async (req, res, next) => {
         role: user.role,
         isAdmin: user.isAdmin,
         verificationStatus: user.verificationStatus,
+        verificationReason: user.verificationReason,
       },
+      authenticity,
     });
   } catch (error) {
     next(error);

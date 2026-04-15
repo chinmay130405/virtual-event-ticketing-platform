@@ -10,7 +10,8 @@ import orderService from '../services/orderService';
 
 const SupportCenter = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, user } = useAuth();
+  const currentUserName = user?.name || 'You';
   const [tickets, setTickets] = useState([]);
   const [orders, setOrders] = useState([]);
   const [selectedTicketId, setSelectedTicketId] = useState('');
@@ -344,7 +345,12 @@ const SupportCenter = () => {
                       }`}
                     >
                       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        {item.sender?.name || 'Unknown'} {item.isAdminReply ? '(Support)' : '(You)'}
+                        {item.sender?.name || 'Unknown'}{' '}
+                        {item.isAdminReply
+                          ? '(Support)'
+                          : item.sender?.name === currentUserName
+                            ? '(You)'
+                            : '(User)'}
                       </p>
                       <p>{item.message}</p>
                     </div>
