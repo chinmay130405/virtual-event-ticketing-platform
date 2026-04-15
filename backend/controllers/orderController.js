@@ -9,6 +9,47 @@ const Event = require('../models/Event');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const { sendTicketConfirmation, sendRefundConfirmation } = require('../utils/email');
+const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
+
+const aggregateOrderTicketQuantities = (order) => {
+  const map = new Map();
+
+  (order.tickets || []).forEach((ticket) => {
+    const eventId = String(ticket.event);
+    map.set(eventId, (map.get(eventId) || 0) + (ticket.quantity || 1));
+  });
+
+  return map;
+};
+
+const syncEventTicketMetrics = async (eventIds) => {
+  const uniqueEventIds = Array.from(new Set((eventIds || []).map((id) => String(id))));
+  if (uniqueEventIds.length === 0) {
+    return;
+  }
+
+  const metricsByEvent = await getTicketMetricsByEventIds(uniqueEventIds);
+
+  const bulkOps = uniqueEventIds.map((eventId) => {
+    const metrics = metricsByEvent.get(eventId) || { ticketsSold: 0, ticketsReserved: 0 };
+
+    return {
+      updateOne: {
+        filter: { _id: eventId },
+        update: {
+          $set: {
+            ticketsSold: metrics.ticketsSold,
+            ticketsReserved: metrics.ticketsReserved,
+          },
+        },
+      },
+    };
+  });
+
+  if (bulkOps.length > 0) {
+    await Event.bulkWrite(bulkOps);
+  }
+};
 
 /**
  * Create order from cart (Checkout)
@@ -100,15 +141,22 @@ exports.checkout = async (req, res, next) => {
       razorpayPaymentId: razorpayPaymentId || '',
       neftReferenceNumber: neftReferenceNumber || '',
       neftVerificationStatus: isNeft ? 'pending' : undefined,
+      ticketsInventoryState: isNeft ? 'reserved' : 'sold',
       totalAmount: 0,
       paymentStatus: isNeft ? 'pending' : 'completed',
       orderStatus: isNeft ? 'pending' : 'confirmed',
     };
 
+    const cartEventIds = cart.items.map((item) => String(item.event._id));
+    const ticketMetricsByEvent = await getTicketMetricsByEventIds(cartEventIds);
+
     for (const item of cart.items) {
       const event = item.event;
 
-      const availableTickets = event.ticketsAvailable - event.ticketsSold;
+      const eventMetrics =
+        ticketMetricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+      const availableTickets =
+        event.ticketsAvailable - eventMetrics.ticketsSold - eventMetrics.ticketsReserved;
       if (item.quantity > availableTickets) {
         return res.status(400).json({
           success: false,
@@ -126,17 +174,13 @@ exports.checkout = async (req, res, next) => {
         });
       }
 
-      if (!isNeft) {
-        event.ticketsSold += item.quantity;
-        await event.save();
-      }
-
       orderData.totalAmount += event.price * item.quantity;
     }
 
     orderData.tickets = tickets;
 
     const order = await Order.create(orderData);
+    await syncEventTicketMetrics(cartEventIds);
 
     const pointsEarned = Math.floor(orderData.totalAmount);
     await User.findByIdAndUpdate(req.user.id, {
@@ -273,18 +317,14 @@ exports.cancelOrder = async (req, res, next) => {
       });
     }
 
+    const orderEventIds = Array.from(new Set((order.tickets || []).map((ticket) => String(ticket.event))));
+
     // Update order status
     order.orderStatus = 'cancelled';
+    order.ticketsInventoryState = 'released';
     await order.save();
 
-    // Refund tickets (update event ticketsSold)
-    for (const ticket of order.tickets) {
-      const event = await Event.findById(ticket.event);
-      if (event) {
-        event.ticketsSold -= ticket.quantity;
-        await event.save();
-      }
-    }
+    await syncEventTicketMetrics(orderEventIds);
 
     res.status(200).json({
       success: true,
@@ -322,6 +362,8 @@ exports.updateOrderStatus = async (req, res, next) => {
     }
 
     const previousStatus = order.orderStatus;
+    const previousInventoryState = order.ticketsInventoryState;
+    const orderEventIds = Array.from(new Set((order.tickets || []).map((ticket) => String(ticket.event))));
 
     // Prevent redundant updates
     if (previousStatus === status) {
@@ -331,37 +373,32 @@ exports.updateOrderStatus = async (req, res, next) => {
       });
     }
 
-    // Restore inventory when moving to cancelled/refunded from confirmed
-    if (
-      previousStatus === 'confirmed' &&
-      (status === 'cancelled' || status === 'refunded')
-    ) {
-      for (const ticket of order.tickets) {
-        const event = await Event.findById(ticket.event);
-        if (event) {
-          event.ticketsSold = Math.max(0, event.ticketsSold - ticket.quantity);
-          await event.save();
-        }
-      }
+    if (status === 'confirmed') {
+      order.ticketsInventoryState = 'sold';
+    } else if (status === 'cancelled' || status === 'refunded') {
+      order.ticketsInventoryState = 'released';
     }
 
-    // Deduct inventory when re-confirming a cancelled/refunded order
     if (
-      (previousStatus === 'cancelled' || previousStatus === 'refunded') &&
-      status === 'confirmed'
+      previousInventoryState === 'released' &&
+      order.ticketsInventoryState !== 'released' &&
+      orderEventIds.length > 0
     ) {
-      for (const ticket of order.tickets) {
-        const event = await Event.findById(ticket.event);
-        if (event) {
-          const remaining = event.ticketsAvailable - event.ticketsSold;
-          if (ticket.quantity > remaining) {
-            return res.status(400).json({
-              success: false,
-              message: `Not enough tickets available for "${event.title}" to re-confirm`,
-            });
-          }
-          event.ticketsSold += ticket.quantity;
-          await event.save();
+      const events = await Event.find({ _id: { $in: orderEventIds } }).select('title ticketsAvailable');
+      const metricsByEvent = await getTicketMetricsByEventIds(orderEventIds);
+      const orderTicketTotals = aggregateOrderTicketQuantities(order);
+
+      for (const event of events) {
+        const metrics =
+          metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+        const requiredQty = orderTicketTotals.get(String(event._id)) || 0;
+        const available = event.ticketsAvailable - metrics.ticketsSold - metrics.ticketsReserved;
+
+        if (requiredQty > available) {
+          return res.status(400).json({
+            success: false,
+            message: `Not enough tickets available for "${event.title}" to re-confirm`,
+          });
         }
       }
     }
@@ -377,6 +414,7 @@ exports.updateOrderStatus = async (req, res, next) => {
       });
     }
     await order.save();
+    await syncEventTicketMetrics(orderEventIds);
 
     res.status(200).json({
       success: true,
@@ -430,21 +468,17 @@ exports.verifyNeftPayment = async (req, res, next) => {
       order.paymentStatus = 'completed';
       order.orderStatus = 'confirmed';
       order.neftVerificationStatus = 'verified';
-
-      for (const ticket of order.tickets) {
-        const event = await Event.findById(ticket.event);
-        if (event) {
-          event.ticketsSold += ticket.quantity;
-          await event.save();
-        }
-      }
+      order.ticketsInventoryState = 'sold';
     } else {
       order.paymentStatus = 'failed';
       order.orderStatus = 'cancelled';
       order.neftVerificationStatus = 'rejected';
+      order.ticketsInventoryState = 'released';
     }
 
     await order.save();
+    const orderEventIds = Array.from(new Set((order.tickets || []).map((ticket) => String(ticket.event))));
+    await syncEventTicketMetrics(orderEventIds);
 
     res.status(200).json({
       success: true,

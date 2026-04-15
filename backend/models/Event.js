@@ -42,6 +42,11 @@ const eventSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    ticketsReserved: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     eventDate: {
       type: Date,
       required: [true, 'Please provide event date'],

@@ -4,6 +4,7 @@
  */
 
 const Event = require('../models/Event');
+const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
 
 /** Low-stock threshold constant (default) */
 const DEFAULT_LOW_STOCK_THRESHOLD = 10;
@@ -15,14 +16,19 @@ const DEFAULT_LOW_STOCK_THRESHOLD = 10;
 exports.getInventoryOverview = async (req, res, next) => {
   try {
     const events = await Event.find()
-      .select('title category price ticketsAvailable ticketsSold eventDate isActive')
+      .select('title category price ticketsAvailable eventDate isActive')
       .sort({ eventDate: 1 })
       .lean();
 
+    const eventIds = events.map((event) => String(event._id));
+    const metricsByEvent = await getTicketMetricsByEventIds(eventIds);
+
     const inventory = events.map((event) => {
-      const remaining = event.ticketsAvailable - event.ticketsSold;
+      const metrics =
+        metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+      const remaining = event.ticketsAvailable - metrics.ticketsSold - metrics.ticketsReserved;
       const occupancy = event.ticketsAvailable > 0
-        ? ((event.ticketsSold / event.ticketsAvailable) * 100).toFixed(1)
+        ? ((metrics.ticketsSold / event.ticketsAvailable) * 100).toFixed(1)
         : '0.0';
 
       let stockStatus = 'in_stock';
@@ -38,7 +44,8 @@ exports.getInventoryOverview = async (req, res, next) => {
         category: event.category,
         price: event.price,
         ticketsAvailable: event.ticketsAvailable,
-        ticketsSold: event.ticketsSold,
+        ticketsSold: metrics.ticketsSold,
+        ticketsReserved: metrics.ticketsReserved,
         remaining,
         occupancy: parseFloat(occupancy),
         stockStatus,
@@ -82,12 +89,15 @@ exports.adjustInventory = async (req, res, next) => {
     }
 
     const newTotal = event.ticketsAvailable + adjustment;
+    const metricsByEvent = await getTicketMetricsByEventIds([String(event._id)]);
+    const metrics = metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+    const committedTickets = metrics.ticketsSold + metrics.ticketsReserved;
 
-    // Cannot reduce below tickets already sold
-    if (newTotal < event.ticketsSold) {
+    // Cannot reduce below tickets already sold or reserved
+    if (newTotal < committedTickets) {
       return res.status(400).json({
         success: false,
-        message: `Cannot set available tickets below sold count (${event.ticketsSold})`,
+        message: `Cannot set available tickets below committed tickets (${committedTickets})`,
       });
     }
 
@@ -100,9 +110,11 @@ exports.adjustInventory = async (req, res, next) => {
     }
 
     event.ticketsAvailable = newTotal;
+    event.ticketsSold = metrics.ticketsSold;
+    event.ticketsReserved = metrics.ticketsReserved;
     await event.save();
 
-    const remaining = event.ticketsAvailable - event.ticketsSold;
+    const remaining = event.ticketsAvailable - event.ticketsSold - event.ticketsReserved;
     let stockStatus = 'in_stock';
     if (remaining <= 0) {
       stockStatus = 'sold_out';
@@ -118,6 +130,7 @@ exports.adjustInventory = async (req, res, next) => {
         title: event.title,
         ticketsAvailable: event.ticketsAvailable,
         ticketsSold: event.ticketsSold,
+        ticketsReserved: event.ticketsReserved,
         remaining,
         stockStatus,
       },
@@ -136,19 +149,25 @@ exports.getLowStockEvents = async (req, res, next) => {
     const threshold = parseInt(req.query.threshold) || DEFAULT_LOW_STOCK_THRESHOLD;
 
     const events = await Event.find({ isActive: true })
-      .select('title category price ticketsAvailable ticketsSold eventDate')
+      .select('title category price ticketsAvailable eventDate')
       .lean();
+
+    const eventIds = events.map((event) => String(event._id));
+    const metricsByEvent = await getTicketMetricsByEventIds(eventIds);
 
     const lowStockEvents = events
       .map((event) => {
-        const remaining = event.ticketsAvailable - event.ticketsSold;
+        const metrics =
+          metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+        const remaining = event.ticketsAvailable - metrics.ticketsSold - metrics.ticketsReserved;
         return {
           _id: event._id,
           title: event.title,
           category: event.category,
           price: event.price,
           ticketsAvailable: event.ticketsAvailable,
-          ticketsSold: event.ticketsSold,
+          ticketsSold: metrics.ticketsSold,
+          ticketsReserved: metrics.ticketsReserved,
           remaining,
           eventDate: event.eventDate,
           stockStatus: remaining <= 0 ? 'sold_out' : 'low_stock',

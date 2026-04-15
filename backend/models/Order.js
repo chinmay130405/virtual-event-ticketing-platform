@@ -93,6 +93,11 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'verified', 'rejected'],
       default: 'pending',
     },
+    ticketsInventoryState: {
+      type: String,
+      enum: ['sold', 'reserved', 'released'],
+      default: 'sold',
+    },
     notes: String,
     referralSource: {
       type: String,

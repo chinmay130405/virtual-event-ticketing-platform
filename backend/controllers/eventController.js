@@ -6,6 +6,7 @@
 const Event = require('../models/Event');
 const Order = require('../models/Order');
 const Feedback = require('../models/Feedback');
+const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
 
 /**
  * Get all events with filtering and search
@@ -53,10 +54,23 @@ exports.getAllEvents = async (req, res, next) => {
       .populate('createdBy', 'name email')
       .lean();
 
+    const eventIds = events.map((event) => String(event._id));
+    const metricsByEvent = await getTicketMetricsByEventIds(eventIds);
+    const enrichedEvents = events.map((event) => {
+      const metrics =
+        metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+
+      return {
+        ...event,
+        ticketsSold: metrics.ticketsSold,
+        ticketsReserved: metrics.ticketsReserved,
+      };
+    });
+
     res.status(200).json({
       success: true,
-      count: events.length,
-      events,
+      count: enrichedEvents.length,
+      events: enrichedEvents,
     });
   } catch (error) {
     next(error);
@@ -78,9 +92,17 @@ exports.getEventById = async (req, res, next) => {
       });
     }
 
+    const metricsByEvent = await getTicketMetricsByEventIds([String(event._id)]);
+    const metrics =
+      metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+
     res.status(200).json({
       success: true,
-      event,
+      event: {
+        ...event.toObject(),
+        ticketsSold: metrics.ticketsSold,
+        ticketsReserved: metrics.ticketsReserved,
+      },
     });
   } catch (error) {
     next(error);

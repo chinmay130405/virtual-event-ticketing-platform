@@ -5,6 +5,7 @@
 
 const Cart = require('../models/Cart');
 const Event = require('../models/Event');
+const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
 
 /**
  * Get user's cart
@@ -61,7 +62,9 @@ exports.addToCart = async (req, res, next) => {
     }
 
     // Check ticket availability
-    const availableTickets = event.ticketsAvailable - event.ticketsSold;
+    const metricsByEvent = await getTicketMetricsByEventIds([eventId]);
+    const metrics = metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+    const availableTickets = event.ticketsAvailable - metrics.ticketsSold - metrics.ticketsReserved;
     if (quantity > availableTickets) {
       return res.status(400).json({
         success: false,
@@ -78,6 +81,14 @@ exports.addToCart = async (req, res, next) => {
 
     // Check if item already in cart
     const existingItem = cart.items.find((item) => item.event.toString() === eventId);
+    const requestedTotalQty = existingItem ? existingItem.quantity + quantity : quantity;
+
+    if (requestedTotalQty > availableTickets) {
+      return res.status(400).json({
+        success: false,
+        message: `Only ${availableTickets} tickets available`,
+      });
+    }
 
     if (existingItem) {
       // Update quantity
@@ -143,7 +154,9 @@ exports.updateCartItem = async (req, res, next) => {
 
     // Check ticket availability
     const event = await Event.findById(eventId);
-    const availableTickets = event.ticketsAvailable - event.ticketsSold;
+    const metricsByEvent = await getTicketMetricsByEventIds([eventId]);
+    const metrics = metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+    const availableTickets = event.ticketsAvailable - metrics.ticketsSold - metrics.ticketsReserved;
 
     if (quantity > availableTickets) {
       return res.status(400).json({

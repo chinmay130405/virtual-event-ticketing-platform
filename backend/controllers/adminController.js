@@ -6,6 +6,7 @@
 const User = require('../models/User');
 const Event = require('../models/Event');
 const Order = require('../models/Order');
+const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
 
 /**
  * Get all users (Admin only)
@@ -132,6 +133,11 @@ exports.getDashboardStats = async (req, res, next) => {
 
     const ticketsSold = await Order.aggregate([
       {
+        $match: {
+          orderStatus: 'confirmed',
+        },
+      },
+      {
         $group: {
           _id: null,
           total: { $sum: { $size: '$tickets' } },
@@ -144,9 +150,28 @@ exports.getDashboardStats = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
-    const topEvents = await Event.find()
-      .sort({ ticketsSold: -1 })
-      .limit(5);
+    const topEventsRaw = await Event.find()
+      .select('title ticketsAvailable price eventDate')
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean();
+
+    const topEventIds = topEventsRaw.map((event) => String(event._id));
+    const metricsByEvent = await getTicketMetricsByEventIds(topEventIds);
+
+    const topEvents = topEventsRaw
+      .map((event) => {
+        const metrics =
+          metricsByEvent.get(String(event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+
+        return {
+          ...event,
+          ticketsSold: metrics.ticketsSold,
+          ticketsReserved: metrics.ticketsReserved,
+        };
+      })
+      .sort((a, b) => b.ticketsSold - a.ticketsSold)
+      .slice(0, 5);
 
     res.status(200).json({
       success: true,
@@ -171,18 +196,27 @@ exports.getDashboardStats = async (req, res, next) => {
  */
 exports.getEventsAnalytics = async (req, res, next) => {
   try {
-    const events = await Event.find().select(
-      'title price ticketsAvailable ticketsSold eventDate'
-    );
+    const events = await Event.find().select('title price ticketsAvailable eventDate').lean();
+    const eventIds = events.map((event) => String(event._id));
+    const metricsByEvent = await getTicketMetricsByEventIds(eventIds);
 
     const analytics = events.map((event) => ({
       id: event._id,
       title: event.title,
       price: event.price,
       ticketsAvailable: event.ticketsAvailable,
-      ticketsSold: event.ticketsSold,
-      revenue: event.price * event.ticketsSold,
-      occupancy: ((event.ticketsSold / event.ticketsAvailable) * 100).toFixed(2),
+      ticketsSold: (metricsByEvent.get(String(event._id)) || { ticketsSold: 0 }).ticketsSold,
+      ticketsReserved:
+        (metricsByEvent.get(String(event._id)) || { ticketsReserved: 0 }).ticketsReserved,
+      revenue:
+        event.price * (metricsByEvent.get(String(event._id)) || { ticketsSold: 0 }).ticketsSold,
+      occupancy:
+        event.ticketsAvailable > 0
+          ? (
+              (((metricsByEvent.get(String(event._id)) || { ticketsSold: 0 }).ticketsSold * 100) /
+                event.ticketsAvailable)
+            ).toFixed(2)
+          : '0.00',
       eventDate: event.eventDate,
     }));
 

@@ -634,6 +634,10 @@ const AdminDashboard = () => {
                           <p className="text-xs text-slate-400">Sold</p>
                           <p className="font-semibold text-white">{event.ticketsSold}</p>
                         </div>
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-2">
+                          <p className="text-xs text-slate-400">Reserved</p>
+                          <p className="font-semibold text-amber-300">{event.ticketsReserved || 0}</p>
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between gap-2">

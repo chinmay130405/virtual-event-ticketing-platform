@@ -6,7 +6,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const EventCard = ({ event }) => {
-  const availableTickets = event.ticketsAvailable - event.ticketsSold;
+  const soldTickets = event.ticketsSold || 0;
+  const reservedTickets = event.ticketsReserved || 0;
+  const availableTickets = event.ticketsAvailable - soldTickets - reservedTickets;
   const eventDate = new Date(event.eventDate).toLocaleDateString();
   const soldOut = availableTickets <= 0;
 

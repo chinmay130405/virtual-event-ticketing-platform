@@ -1,6 +1,7 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Cart = require('../models/Cart');
+const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
 
 exports.createOrder = async (req, res, next) => {
   try {
@@ -23,6 +24,8 @@ exports.createOrder = async (req, res, next) => {
     }
 
     let totalAmount = 0;
+    const eventIds = cart.items.map((item) => String(item.event._id));
+    const metricsByEvent = await getTicketMetricsByEventIds(eventIds);
 
     for (const item of cart.items) {
       if (!item.event) {
@@ -32,7 +35,10 @@ exports.createOrder = async (req, res, next) => {
         });
       }
 
-      const availableTickets = item.event.ticketsAvailable - item.event.ticketsSold;
+      const metrics =
+        metricsByEvent.get(String(item.event._id)) || { ticketsSold: 0, ticketsReserved: 0 };
+      const availableTickets =
+        item.event.ticketsAvailable - metrics.ticketsSold - metrics.ticketsReserved;
       if (item.quantity > availableTickets) {
         return res.status(400).json({
           success: false,

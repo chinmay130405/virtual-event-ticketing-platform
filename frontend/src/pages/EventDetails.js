@@ -111,7 +111,9 @@ const EventDetails = () => {
 
   const ticketPrice = event.price || 49.99;
   const totalPrice = ticketPrice * quantity;
-  const availableTickets = event.ticketsAvailable - event.ticketsSold;
+  const soldTickets = event.ticketsSold || 0;
+  const reservedTickets = event.ticketsReserved || 0;
+  const availableTickets = event.ticketsAvailable - soldTickets - reservedTickets;
 
   return (
     <div>
@@ -288,6 +290,7 @@ const EventDetails = () => {
                   <button
                     className="flex size-8 items-center justify-center rounded bg-white/5 text-slate-400 hover:text-white"
                     onClick={() => handleQuantityChange(1)}
+                    disabled={quantity >= availableTickets}
                   >
                     +
                   </button>
