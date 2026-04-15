@@ -22,6 +22,7 @@ import OrderConfirmation from './pages/OrderConfirmation';
 import MyTickets from './pages/MyTickets';
 import SupportCenter from './pages/SupportCenter';
 import AdminDashboard from './pages/AdminDashboard';
+import OrganizerDashboard from './pages/OrganizerDashboard';
 import Contact from './pages/Contact';
 import SummerPromo from './pages/SummerPromo';
 import BlackFridayPromo from './pages/BlackFridayPromo';
@@ -64,8 +65,22 @@ const AdminRoute = ({ children }) => {
   return isAuthenticated && isAdmin ? children : <Navigate to="/" />;
 };
 
+const OrganizerRoute = ({ children }) => {
+  const { isAuthenticated, isOrganizer, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center px-5 py-24">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-border-dark border-t-primary"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated && isOrganizer ? children : <Navigate to="/" />;
+};
+
 function AppContent() {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, isAdmin, isOrganizer, loading } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -82,6 +97,10 @@ function AppContent() {
 
   if (isAuthenticated && isAdmin && location.pathname !== '/admin') {
     return <Navigate to="/admin" replace />;
+  }
+
+  if (isAuthenticated && isOrganizer && location.pathname !== '/organizer') {
+    return <Navigate to="/organizer" replace />;
   }
 
   return (
@@ -147,6 +166,14 @@ function AppContent() {
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/organizer"
+          element={
+            <OrganizerRoute>
+              <OrganizerDashboard />
+            </OrganizerRoute>
           }
         />
 

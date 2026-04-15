@@ -11,7 +11,8 @@ const authService = {
   // Register new user
   register: async (userData) => {
     try {
-      const response = await axios.post(`${API_URL}/register`, userData);
+      const registerPath = userData.role === 'organizer' ? 'register-organizer' : 'register';
+      const response = await axios.post(`${API_URL}/${registerPath}`, userData);
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));

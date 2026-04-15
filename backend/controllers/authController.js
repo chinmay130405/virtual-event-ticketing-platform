@@ -5,6 +5,8 @@
 
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
+const { normalizeRole, getPublicRegistrationRole } = require('../utils/roles');
+const { validateOrganizerRegistration } = require('../utils/organizerVerification');
 
 /**
  * Register a new user
@@ -12,7 +14,7 @@ const { generateToken } = require('../utils/jwt');
  */
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, confirmPassword } = req.body;
+    const { name, email, password, confirmPassword, role } = req.body;
 
     // Validation
     if (!name || !email || !password) {
@@ -43,10 +45,16 @@ exports.register = async (req, res, next) => {
       name,
       email: email.toLowerCase(),
       password,
+      role: getPublicRegistrationRole(role),
     });
 
+    if (user.role === 'admin' && !user.isAdmin) {
+      user.isAdmin = true;
+      await user.save({ validateBeforeSave: false });
+    }
+
     // Generate token
-    const token = generateToken(user._id, user.isAdmin);
+    const token = generateToken(user._id, user.role);
 
     res.status(201).json({
       success: true,
@@ -56,7 +64,66 @@ exports.register = async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         isAdmin: user.isAdmin,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update organizer payout bank details
+ * PUT /api/auth/organizer/bank-details
+ */
+exports.updateOrganizerBankDetails = async (req, res, next) => {
+  try {
+    const { accountHolderName, accountNumber, ifscCode, bankName } = req.body;
+
+    if (!accountHolderName || !accountNumber || !ifscCode || !bankName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required bank details',
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.role !== 'organizer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only organizers can update payout bank details',
+      });
+    }
+
+    user.bankDetails = {
+      accountHolderName: String(accountHolderName).trim(),
+      accountNumber: String(accountNumber).trim(),
+      ifscCode: String(ifscCode).trim().toUpperCase(),
+      bankName: String(bankName).trim(),
+    };
+
+    await user.save({ validateBeforeSave: false });
+
+    const maskedAccount = user.bankDetails.accountNumber.length > 4
+      ? `${'*'.repeat(user.bankDetails.accountNumber.length - 4)}${user.bankDetails.accountNumber.slice(-4)}`
+      : user.bankDetails.accountNumber;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Bank details updated successfully',
+      bankDetails: {
+        accountHolderName: user.bankDetails.accountHolderName,
+        bankName: user.bankDetails.bankName,
+        ifscCode: user.bankDetails.ifscCode,
+        maskedAccountNumber: maskedAccount,
       },
     });
   } catch (error) {
@@ -101,7 +168,12 @@ exports.login = async (req, res, next) => {
     }
 
     // Generate token
-    const token = generateToken(user._id, user.isAdmin);
+    if (!user.role) {
+      user.role = normalizeRole(undefined, user.isAdmin);
+      await user.save({ validateBeforeSave: false });
+    }
+
+    const token = generateToken(user._id, user.role);
 
     // Update last login time
     user.lastLogin = new Date();
@@ -115,7 +187,96 @@ exports.login = async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         isAdmin: user.isAdmin,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Register a new organizer account
+ * POST /api/auth/register-organizer
+ */
+exports.registerOrganizer = async (req, res, next) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      confirmPassword,
+      companyName,
+      gstNumber,
+      businessAddress,
+      venueRegistration,
+      phone,
+    } = req.body;
+
+    if (!name || !email || !password || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields',
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Passwords do not match',
+      });
+    }
+
+    const verification = validateOrganizerRegistration({
+      companyName,
+      gstNumber,
+      businessAddress,
+    });
+
+    if (!verification.valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organizer registration validation failed',
+        errors: verification.errors,
+      });
+    }
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+    if (user) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists',
+      });
+    }
+
+    user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password,
+      role: 'organizer',
+      isAdmin: false,
+      phone: phone || '',
+      companyName: String(companyName).trim(),
+      gstNumber: String(gstNumber).trim().toUpperCase(),
+      businessAddress: String(businessAddress).trim(),
+      venueRegistration: venueRegistration ? String(venueRegistration).trim() : '',
+      verificationStatus: 'pending',
+    });
+
+    const token = generateToken(user._id, user.role);
+
+    res.status(201).json({
+      success: true,
+      message: 'Organizer registration submitted. Awaiting approval.',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isAdmin: user.isAdmin,
+        verificationStatus: user.verificationStatus,
       },
     });
   } catch (error) {

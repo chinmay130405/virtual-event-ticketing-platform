@@ -33,11 +33,11 @@ const adminService = {
   },
 
   // Update user role
-  updateUserRole: async (id, isAdmin, token) => {
+  updateUserRole: async (id, role, token) => {
     try {
       const response = await axios.put(
         `${API_URL}/users/${id}/role`,
-        { isAdmin },
+        { role },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -126,6 +126,32 @@ const adminService = {
       const response = await axios.put(
         `/api/orders/${orderId}/status`,
         { status },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getPendingOrganizers: async (token) => {
+    try {
+      const response = await axios.get(`${API_URL}/organizers/pending`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  verifyOrganizer: async (organizerId, action, reason, token) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/organizers/${organizerId}/verify`,
+        { action, reason },
         {
           headers: { Authorization: `Bearer ${token}` },
         }

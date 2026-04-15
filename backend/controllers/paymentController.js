@@ -1,6 +1,7 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Cart = require('../models/Cart');
+const User = require('../models/User');
 const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
 
 exports.createOrder = async (req, res, next) => {
@@ -130,6 +131,61 @@ exports.verifyPayment = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: 'Payment signature verified successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getBankTransferInstructions = async (req, res, next) => {
+  try {
+    const organizerId = req.query.organizerId;
+
+    if (!organizerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'organizerId is required',
+      });
+    }
+
+    const organizer = await User.findById(organizerId).select('role bankDetails verificationStatus');
+    if (!organizer || organizer.role !== 'organizer') {
+      return res.status(404).json({
+        success: false,
+        message: 'Organizer not found',
+      });
+    }
+
+    if (organizer.verificationStatus !== 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'Organizer is not approved for payouts yet',
+      });
+    }
+
+    const details = organizer.bankDetails || {};
+    if (!details.accountNumber || !details.ifscCode || !details.accountHolderName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organizer bank details are incomplete',
+      });
+    }
+
+    const accountNumber = String(details.accountNumber);
+    const maskedAccount = accountNumber.length > 4
+      ? `${'*'.repeat(accountNumber.length - 4)}${accountNumber.slice(-4)}`
+      : accountNumber;
+
+    return res.status(200).json({
+      success: true,
+      payoutMethod: 'bank_transfer',
+      bankDetails: {
+        accountHolderName: details.accountHolderName,
+        bankName: details.bankName,
+        ifscCode: details.ifscCode,
+        maskedAccountNumber: maskedAccount,
+      },
+      message: 'Use these details for NEFT/Bank transfer payout.',
     });
   } catch (error) {
     next(error);

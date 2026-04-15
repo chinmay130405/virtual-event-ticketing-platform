@@ -7,6 +7,7 @@ const User = require('../models/User');
 const Event = require('../models/Event');
 const Order = require('../models/Order');
 const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
+const { normalizeRole } = require('../utils/roles');
 
 /**
  * Get all users (Admin only)
@@ -63,11 +64,15 @@ exports.getUserDetails = async (req, res, next) => {
  */
 exports.updateUserRole = async (req, res, next) => {
   try {
-    const { isAdmin } = req.body;
+    const { role } = req.body;
+    const normalizedRole = normalizeRole(role, false);
 
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { isAdmin },
+      {
+        role: normalizedRole,
+        isAdmin: normalizedRole === 'admin',
+      },
       { new: true, runValidators: true }
     );
 
@@ -261,6 +266,72 @@ exports.getSalesReport = async (req, res, next) => {
     res.status(200).json({
       success: true,
       report,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get pending organizer verifications
+ * GET /api/admin/organizers/pending
+ */
+exports.getPendingOrganizers = async (req, res, next) => {
+  try {
+    const organizers = await User.find({
+      role: 'organizer',
+      verificationStatus: 'pending',
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: organizers.length,
+      organizers,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Verify organizer account
+ * PUT /api/admin/organizers/:id/verify
+ */
+exports.verifyOrganizer = async (req, res, next) => {
+  try {
+    const { action, reason } = req.body;
+    const validActions = ['approve', 'reject'];
+
+    if (!action || !validActions.includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid action. Must be approve or reject',
+      });
+    }
+
+    const organizer = await User.findById(req.params.id);
+
+    if (!organizer || organizer.role !== 'organizer') {
+      return res.status(404).json({
+        success: false,
+        message: 'Organizer not found',
+      });
+    }
+
+    organizer.verificationStatus = action === 'approve' ? 'approved' : 'rejected';
+    organizer.verificationReason = reason ? String(reason).trim() : '';
+    organizer.verifiedAt = new Date();
+    organizer.verifiedBy = req.user.id;
+
+    await organizer.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message:
+        action === 'approve'
+          ? 'Organizer approved successfully'
+          : 'Organizer rejected successfully',
+      organizer,
     });
   } catch (error) {
     next(error);

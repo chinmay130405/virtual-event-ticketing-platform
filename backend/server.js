@@ -14,6 +14,7 @@ const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const { genericLimiter } = require('./middleware/rateLimiter');
 const User = require('./models/User');
+const { normalizeRole } = require('./utils/roles');
 
 const bootstrapAdminAccount = async () => {
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -33,13 +34,15 @@ const bootstrapAdminAccount = async () => {
         email: adminEmail,
         password: adminPassword,
         phone: '1234567890',
+        role: 'admin',
         isAdmin: true,
       });
       console.log(`✅ Admin account created: ${adminEmail}`);
-    } else if (!adminUser.isAdmin) {
+    } else if (!adminUser.isAdmin || normalizeRole(adminUser.role, adminUser.isAdmin) !== 'admin') {
       adminUser.isAdmin = true;
+      adminUser.role = 'admin';
       await adminUser.save();
-      console.log(`✅ Admin flag enabled for: ${adminEmail}`);
+      console.log(`✅ Admin privileges enabled for: ${adminEmail}`);
     } else {
       console.log(`✅ Admin account verified: ${adminEmail}`);
     }
@@ -82,6 +85,7 @@ const startServer = async () => {
   app.use('/api/payments', require('./routes/paymentRoutes'));
   app.use('/api/orders', require('./routes/orders'));
   app.use('/api/admin', require('./routes/admin'));
+  app.use('/api/organizer', require('./routes/organizer'));
   app.use('/api/inventory', require('./routes/inventory'));
   app.use('/api/support', require('./routes/support'));
   app.use('/api/crm', require('./routes/crm'));

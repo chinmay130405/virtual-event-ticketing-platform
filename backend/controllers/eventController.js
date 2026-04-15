@@ -7,6 +7,7 @@ const Event = require('../models/Event');
 const Order = require('../models/Order');
 const Feedback = require('../models/Feedback');
 const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
+const { isAdminUser } = require('../utils/roles');
 
 /**
  * Get all events with filtering and search
@@ -158,6 +159,7 @@ exports.createEvent = async (req, res, next) => {
             .slice(0, 10)
         : [],
       createdBy: req.user.id,
+      organizer: req.user.role === 'organizer' ? req.user.id : null,
     });
 
     res.status(201).json({
@@ -186,7 +188,7 @@ exports.updateEvent = async (req, res, next) => {
     }
 
     // Check ownership
-    if (event.createdBy.toString() !== req.user.id && !req.user.isAdmin) {
+    if (event.createdBy.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this event',
@@ -251,7 +253,7 @@ exports.deleteEvent = async (req, res, next) => {
     }
 
     // Check ownership
-    if (event.createdBy.toString() !== req.user.id && !req.user.isAdmin) {
+    if (event.createdBy.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this event',

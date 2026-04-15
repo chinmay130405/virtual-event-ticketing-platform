@@ -10,6 +10,7 @@ const Review = require('../models/Review');
 const MarketingCampaign = require('../models/MarketingCampaign');
 const User = require('../models/User');
 const Event = require('../models/Event');
+const { isAdminUser } = require('../utils/roles');
 
 router.get('/health', (req, res) => {
   res.json({ success: true, message: 'CRM API running' });
@@ -109,7 +110,7 @@ router.delete('/reviews/:id', protect, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
-    if (review.user.toString() !== req.user.id && !req.user.isAdmin) {
+    if (review.user.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
@@ -270,7 +271,7 @@ router.put('/users/:id/preferences', protect, async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (user._id.toString() !== req.user.id && !req.user.isAdmin) {
+    if (user._id.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 

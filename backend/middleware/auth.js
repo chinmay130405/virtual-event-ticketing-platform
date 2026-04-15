@@ -4,6 +4,7 @@
  */
 
 const jwt = require('jsonwebtoken');
+const { hasAnyRole, isAdminUser } = require('../utils/roles');
 
 /**
  * Verify JWT token and attach user to request
@@ -41,7 +42,7 @@ const protect = (req, res, next) => {
  * Check if user is admin
  */
 const admin = (req, res, next) => {
-  if (!req.user || !req.user.isAdmin) {
+  if (!isAdminUser(req.user)) {
     return res.status(403).json({
       success: false,
       message: 'This route is only accessible to admin users',
@@ -50,4 +51,20 @@ const admin = (req, res, next) => {
   next();
 };
 
-module.exports = { protect, admin };
+/**
+ * Check if user has one of required roles
+ */
+const requireRole = (roles = []) => {
+  return (req, res, next) => {
+    if (!hasAnyRole(req.user, roles)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized for this role-protected route',
+      });
+    }
+
+    next();
+  };
+};
+
+module.exports = { protect, admin, requireRole };

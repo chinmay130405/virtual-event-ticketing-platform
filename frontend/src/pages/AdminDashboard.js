@@ -40,6 +40,8 @@ const AdminDashboard = () => {
   const [supportReply, setSupportReply] = useState('');
   const [supportReplyLoading, setSupportReplyLoading] = useState(false);
   const [supportStatusLoading, setSupportStatusLoading] = useState(false);
+  const [pendingOrganizers, setPendingOrganizers] = useState([]);
+  const [verifyReason, setVerifyReason] = useState('');
 
   useEffect(() => {
     fetchDashboardData();
@@ -86,6 +88,9 @@ const AdminDashboard = () => {
           setSelectedSupportTicket(null);
           setSupportMessages([]);
         }
+      } else if (activeTab === 'organizers') {
+        const response = await adminService.getPendingOrganizers(token);
+        setPendingOrganizers(response.organizers || []);
       } else if (activeTab === 'crm') {
         const response = await crmService.getUsers({ segment: crmSegment });
         setCrmUsers(response.data);
@@ -229,6 +234,26 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleVerifyOrganizer = async (organizerId, action) => {
+    try {
+      setError('');
+      setSuccessMsg('');
+      const token = localStorage.getItem('token');
+      const response = await adminService.verifyOrganizer(
+        organizerId,
+        action,
+        verifyReason,
+        token
+      );
+      setSuccessMsg(response.message);
+      setVerifyReason('');
+      const refreshed = await adminService.getPendingOrganizers(token);
+      setPendingOrganizers(refreshed.organizers || []);
+    } catch (err) {
+      setError(err.message || 'Failed to verify organizer');
+    }
+  };
+
   const getStockLabel = (status) => {
     if (status === 'in_stock') return 'In Stock';
     if (status === 'low_stock') return 'Low Stock';
@@ -251,6 +276,7 @@ const AdminDashboard = () => {
     ['support', 'Support'],
     ['users', 'Users'],
     ['analytics', 'Analytics'],
+    ['organizers', 'Organizer Verification'],
     ['crm', 'CRM'],
     ['erp', 'ERP'],
   ];
@@ -816,8 +842,14 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3 font-semibold">{u.name}</td>
                         <td className="px-4 py-3">{u.email}</td>
                         <td className="px-4 py-3">
-                           <span className={`px-2 py-1 text-xs font-bold uppercase rounded ${u.isAdmin ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/10 text-slate-300'}`}>
-                              {u.isAdmin ? 'Admin' : 'User'}
+                           <span
+                             className={`px-2 py-1 text-xs font-bold uppercase rounded ${
+                               (u.role || (u.isAdmin ? 'admin' : 'user')) === 'admin'
+                                 ? 'bg-primary/20 text-primary border border-primary/30'
+                                 : 'bg-white/10 text-slate-300'
+                             }`}
+                           >
+                              {u.role || (u.isAdmin ? 'admin' : 'user')}
                            </span>
                         </td>
                         <td className="px-4 py-3">{new Date(u.createdAt).toLocaleDateString()}</td>
@@ -825,6 +857,69 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {activeTab === 'organizers' && (
+              <div className="space-y-4">
+                {pendingOrganizers.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-surface p-8 text-center text-slate-400">
+                    No pending organizer verifications.
+                  </div>
+                ) : (
+                  pendingOrganizers.map((organizer) => (
+                    <div
+                      key={organizer._id}
+                      className="rounded-2xl border border-white/10 bg-surface p-5"
+                    >
+                      <div className="mb-4 grid gap-2 md:grid-cols-2">
+                        <p className="text-sm text-slate-300">
+                          <span className="text-slate-400">Name:</span> {organizer.name}
+                        </p>
+                        <p className="text-sm text-slate-300">
+                          <span className="text-slate-400">Email:</span> {organizer.email}
+                        </p>
+                        <p className="text-sm text-slate-300">
+                          <span className="text-slate-400">Company:</span> {organizer.companyName || '-'}
+                        </p>
+                        <p className="text-sm text-slate-300">
+                          <span className="text-slate-400">GST:</span> {organizer.gstNumber || '-'}
+                        </p>
+                        <p className="text-sm text-slate-300 md:col-span-2">
+                          <span className="text-slate-400">Address:</span>{' '}
+                          {organizer.businessAddress || '-'}
+                        </p>
+                        <p className="text-sm text-slate-300 md:col-span-2">
+                          <span className="text-slate-400">Venue Registration:</span>{' '}
+                          {organizer.venueRegistration || '-'}
+                        </p>
+                      </div>
+
+                      <textarea
+                        value={verifyReason}
+                        onChange={(e) => setVerifyReason(e.target.value)}
+                        rows={2}
+                        className="mb-3 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
+                        placeholder="Optional reason for approval/rejection"
+                      />
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleVerifyOrganizer(organizer._id, 'approve')}
+                          className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-emerald-300"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleVerifyOrganizer(organizer._id, 'reject')}
+                          className="rounded-full border border-red-400/30 bg-red-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-300"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 

@@ -6,6 +6,7 @@
 const Order = require('../models/Order');
 const SupportTicket = require('../models/SupportTicket');
 const TicketMessage = require('../models/TicketMessage');
+const { isAdminUser } = require('../utils/roles');
 
 /**
  * Create a new support ticket
@@ -32,7 +33,7 @@ exports.createTicket = async (req, res, next) => {
         });
       }
 
-      if (order.user.toString() !== req.user.id && !req.user.isAdmin) {
+      if (order.user.toString() !== req.user.id && !isAdminUser(req.user)) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to link this order',
@@ -53,7 +54,7 @@ exports.createTicket = async (req, res, next) => {
     await TicketMessage.create({
       ticket: ticket._id,
       sender: req.user.id,
-      isAdminReply: !!req.user.isAdmin,
+      isAdminReply: isAdminUser(req.user),
       message: description,
     });
 
@@ -77,7 +78,7 @@ exports.createTicket = async (req, res, next) => {
  */
 exports.getTickets = async (req, res, next) => {
   try {
-    const filter = req.user.isAdmin ? {} : { user: req.user.id };
+    const filter = isAdminUser(req.user) ? {} : { user: req.user.id };
 
     const tickets = await SupportTicket.find(filter)
       .populate('user', 'name email')
@@ -111,7 +112,7 @@ exports.getTicketById = async (req, res, next) => {
       });
     }
 
-    if (ticket.user._id.toString() !== req.user.id && !req.user.isAdmin) {
+    if (ticket.user._id.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view this ticket',
@@ -119,7 +120,7 @@ exports.getTicketById = async (req, res, next) => {
     }
 
     const messages = await TicketMessage.find({ ticket: ticket._id })
-      .populate('sender', 'name email isAdmin')
+      .populate('sender', 'name email role')
       .sort({ createdAt: 1 });
 
     res.status(200).json({
@@ -155,7 +156,7 @@ exports.replyToTicket = async (req, res, next) => {
       });
     }
 
-    if (ticket.user.toString() !== req.user.id && !req.user.isAdmin) {
+    if (ticket.user.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to reply to this ticket',
@@ -165,15 +166,15 @@ exports.replyToTicket = async (req, res, next) => {
     const ticketMessage = await TicketMessage.create({
       ticket: ticket._id,
       sender: req.user.id,
-      isAdminReply: !!req.user.isAdmin,
+      isAdminReply: isAdminUser(req.user),
       message,
     });
 
     if (ticket.status === 'closed') {
       ticket.status = 'pending';
-    } else if (req.user.isAdmin && ticket.status === 'open') {
+    } else if (isAdminUser(req.user) && ticket.status === 'open') {
       ticket.status = 'pending';
-    } else if (!req.user.isAdmin && ticket.status === 'pending') {
+    } else if (!isAdminUser(req.user) && ticket.status === 'pending') {
       ticket.status = 'open';
     }
 
@@ -181,7 +182,7 @@ exports.replyToTicket = async (req, res, next) => {
 
     const populatedMessage = await TicketMessage.findById(ticketMessage._id).populate(
       'sender',
-      'name email isAdmin'
+      'name email role'
     );
 
     res.status(201).json({

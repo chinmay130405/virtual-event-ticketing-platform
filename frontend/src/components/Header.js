@@ -8,7 +8,8 @@ import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  const isAdminUser = !!user?.isAdmin;
+  const isAdminUser = user?.role === 'admin' || !!user?.isAdmin;
+  const isOrganizerUser = user?.role === 'organizer';
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -44,6 +45,13 @@ const Header = () => {
               className="text-sm font-medium uppercase tracking-wider text-primary transition-colors hover:text-primary/80"
             >
               Admin Dashboard
+            </Link>
+          ) : isOrganizerUser ? (
+            <Link
+              to="/organizer"
+              className="text-sm font-medium uppercase tracking-wider text-primary transition-colors hover:text-primary/80"
+            >
+              Organizer Dashboard
             </Link>
           ) : (
             <>
@@ -125,6 +133,14 @@ const Header = () => {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Admin Dashboard
+              </Link>
+            ) : isOrganizerUser ? (
+              <Link
+                to="/organizer"
+                className="text-sm font-medium uppercase tracking-wider text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Organizer Dashboard
               </Link>
             ) : (
               <>

@@ -189,7 +189,7 @@ async function seedDatabase() {
     await Event.deleteMany({});
     console.log('🗑️  Cleared existing events');
 
-    const adminUser = await User.findOne({ isAdmin: true });
+    const adminUser = await User.findOne({ $or: [{ role: 'admin' }, { isAdmin: true }] });
     const createdBy = adminUser ? adminUser._id : new mongoose.Types.ObjectId('000000000000000000000001');
 
     const eventsWithCreatedBy = demoEvents.map(event => ({

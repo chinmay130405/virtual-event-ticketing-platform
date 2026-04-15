@@ -12,6 +12,11 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    role: 'user',
+    companyName: '',
+    gstNumber: '',
+    businessAddress: '',
+    venueRegistration: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,6 +56,19 @@ const Register = () => {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div>
+            <label className="mb-2 block text-sm font-medium text-slate-300">Account Type</label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/40"
+            >
+              <option value="user">Attendee</option>
+              <option value="organizer">Organizer</option>
+            </select>
+          </div>
+
+          <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">Full Name</label>
             <input
               type="text"
@@ -62,6 +80,63 @@ const Register = () => {
               required
             />
           </div>
+
+          {formData.role === 'organizer' && (
+            <>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">Company Name</label>
+                <input
+                  type="text"
+                  name="companyName"
+                  value={formData.companyName}
+                  onChange={handleChange}
+                  placeholder="Acme Events Pvt Ltd"
+                  className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/40"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">GST Number</label>
+                <input
+                  type="text"
+                  name="gstNumber"
+                  value={formData.gstNumber}
+                  onChange={handleChange}
+                  placeholder="22AAAAA0000A1Z5"
+                  className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 uppercase text-white outline-none transition-all placeholder:text-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/40"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">Business Address</label>
+                <textarea
+                  name="businessAddress"
+                  value={formData.businessAddress}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Full registered business address"
+                  className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/40"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Venue Registration (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="venueRegistration"
+                  value={formData.venueRegistration}
+                  onChange={handleChange}
+                  placeholder="Venue/company registration id"
+                  className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600 focus:border-primary focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+            </>
+          )}
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">Email Address</label>

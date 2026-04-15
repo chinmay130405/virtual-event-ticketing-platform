@@ -10,6 +10,11 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const { sendTicketConfirmation, sendRefundConfirmation } = require('../utils/email');
 const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
+const { isAdminUser } = require('../utils/roles');
+const {
+  DEFAULT_PLATFORM_COMMISSION_RATE,
+  calculateCommissionBreakdown,
+} = require('../utils/commission');
 
 const aggregateOrderTicketQuantities = (order) => {
   const map = new Map();
@@ -130,6 +135,12 @@ exports.checkout = async (req, res, next) => {
     }
 
     const tickets = [];
+    let commissionAmount = 0;
+    let organizerPayoutAmount = 0;
+    let organizerSettlement = { organizer: null, event: null };
+    let payoutStatus = 'not_applicable';
+    let payoutMethod = 'none';
+
     const orderData = {
       user: req.user.id,
       attendeeEmail,
@@ -143,6 +154,12 @@ exports.checkout = async (req, res, next) => {
       neftVerificationStatus: isNeft ? 'pending' : undefined,
       ticketsInventoryState: isNeft ? 'reserved' : 'sold',
       totalAmount: 0,
+      commissionRate: DEFAULT_PLATFORM_COMMISSION_RATE,
+      commissionAmount: 0,
+      organizerPayoutAmount: 0,
+      payoutStatus,
+      payoutMethod,
+      organizerSettlement,
       paymentStatus: isNeft ? 'pending' : 'completed',
       orderStatus: isNeft ? 'pending' : 'confirmed',
     };
@@ -174,10 +191,35 @@ exports.checkout = async (req, res, next) => {
         });
       }
 
-      orderData.totalAmount += event.price * item.quantity;
+      const lineTotal = event.price * item.quantity;
+      orderData.totalAmount += lineTotal;
+
+      if (event.organizer) {
+        const breakdown = calculateCommissionBreakdown({
+          grossAmount: lineTotal,
+          commissionRate: DEFAULT_PLATFORM_COMMISSION_RATE,
+        });
+
+        commissionAmount += breakdown.commissionAmount;
+        organizerPayoutAmount += breakdown.netPayoutAmount;
+        payoutStatus = 'pending';
+        payoutMethod = 'razorpay';
+
+        if (!organizerSettlement.organizer) {
+          organizerSettlement = {
+            organizer: event.organizer,
+            event: event._id,
+          };
+        }
+      }
     }
 
     orderData.tickets = tickets;
+    orderData.commissionAmount = commissionAmount;
+    orderData.organizerPayoutAmount = organizerPayoutAmount;
+    orderData.payoutStatus = payoutStatus;
+    orderData.payoutMethod = payoutMethod;
+    orderData.organizerSettlement = organizerSettlement;
 
     const order = await Order.create(orderData);
     await syncEventTicketMetrics(cartEventIds);
@@ -244,7 +286,7 @@ exports.getOrderById = async (req, res, next) => {
     }
 
     // Check if user owns this order
-    if (order.user.toString() !== req.user.id && !req.user.isAdmin) {
+    if (order.user.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view this order',
@@ -303,7 +345,7 @@ exports.cancelOrder = async (req, res, next) => {
     }
 
     // Check authorization
-    if (order.user.toString() !== req.user.id && !req.user.isAdmin) {
+    if (order.user.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to cancel this order',
@@ -508,7 +550,7 @@ exports.downloadTicket = async (req, res, next) => {
     }
 
     // Check authorization
-    if (order.user.toString() !== req.user.id && !req.user.isAdmin) {
+    if (order.user.toString() !== req.user.id && !isAdminUser(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to download this ticket',
@@ -581,6 +623,65 @@ exports.getOrderStats = async (req, res, next) => {
         totalRevenue: totalRevenue[0]?.total || 0,
         ordersByStatus,
         recentOrders,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Request payout for organizer-linked orders
+ * POST /api/orders/payouts/request
+ */
+exports.requestOrganizerPayout = async (req, res, next) => {
+  try {
+    const { orderIds = [], payoutMethod = 'bank_transfer' } = req.body;
+
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'orderIds must be a non-empty array',
+      });
+    }
+
+    const orders = await Order.find({
+      _id: { $in: orderIds },
+      'organizerSettlement.organizer': req.user.id,
+      payoutStatus: 'pending',
+    });
+
+    if (!orders.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'No eligible pending payout orders found',
+      });
+    }
+
+    const validPayoutMethods = ['razorpay', 'bank_transfer', 'neft'];
+    if (!validPayoutMethods.includes(payoutMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid payout method. Must be one of: ${validPayoutMethods.join(', ')}`,
+      });
+    }
+
+    let totalRequested = 0;
+    for (const order of orders) {
+      order.payoutStatus = 'processing';
+      order.payoutMethod = payoutMethod;
+      order.payoutRequestedAt = new Date();
+      totalRequested += order.organizerPayoutAmount || 0;
+      await order.save({ validateBeforeSave: false });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payout request submitted successfully',
+      summary: {
+        ordersCount: orders.length,
+        totalRequested,
+        payoutMethod,
       },
     });
   } catch (error) {

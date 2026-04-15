@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { protect, admin } = require('../middleware/auth');
+const { protect, admin, requireRole } = require('../middleware/auth');
 const {
   getAllEvents,
   getEventById,
@@ -27,9 +27,9 @@ router.get('/:id', getEventById);
 // Protected user routes
 router.post('/:id/feedback', protect, submitFeedback);
 
-// Protected routes (Admin only)
-router.post('/', protect, admin, createEvent);
-router.put('/:id', protect, admin, updateEvent);
-router.delete('/:id', protect, admin, deleteEvent);
+// Protected routes (Admin and organizer)
+router.post('/', protect, requireRole(['admin', 'organizer']), createEvent);
+router.put('/:id', protect, requireRole(['admin', 'organizer']), updateEvent);
+router.delete('/:id', protect, requireRole(['admin', 'organizer']), deleteEvent);
 
 module.exports = router;

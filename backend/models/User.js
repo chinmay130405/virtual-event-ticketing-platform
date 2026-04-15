@@ -31,6 +31,17 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    role: {
+      type: String,
+      enum: ['user', 'organizer', 'admin'],
+      default: 'user',
+    },
+    commissionRate: {
+      type: Number,
+      default: 0.1,
+      min: 0,
+      max: 1,
+    },
     isAdmin: {
       type: Boolean,
       default: false,
@@ -52,6 +63,71 @@ const userSchema = new mongoose.Schema(
     preferences: {
       type: [String],
       default: [],
+    },
+    companyName: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [200, 'Company name cannot exceed 200 characters'],
+    },
+    gstNumber: {
+      type: String,
+      default: '',
+      uppercase: true,
+      trim: true,
+    },
+    venueRegistration: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    businessAddress: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [500, 'Business address cannot exceed 500 characters'],
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['none', 'pending', 'approved', 'rejected'],
+      default: 'none',
+    },
+    verificationReason: {
+      type: String,
+      default: '',
+      maxlength: [500, 'Verification reason cannot exceed 500 characters'],
+    },
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    bankDetails: {
+      accountHolderName: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      accountNumber: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      ifscCode: {
+        type: String,
+        default: '',
+        uppercase: true,
+        trim: true,
+      },
+      bankName: {
+        type: String,
+        default: '',
+        trim: true,
+      },
     },
     lastLogin: {
       type: Date,

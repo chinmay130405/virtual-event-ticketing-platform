@@ -13,6 +13,8 @@ const {
   getDashboardStats,
   getEventsAnalytics,
   getSalesReport,
+  getPendingOrganizers,
+  verifyOrganizer,
 } = require('../controllers/adminController');
 
 // All admin routes require protection and admin role
@@ -32,5 +34,9 @@ router.get('/events/analytics', getEventsAnalytics);
 
 // Reports
 router.get('/reports/sales', getSalesReport);
+
+// Organizer verification
+router.get('/organizers/pending', getPendingOrganizers);
+router.put('/organizers/:id/verify', verifyOrganizer);
 
 module.exports = router;

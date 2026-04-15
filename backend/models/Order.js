@@ -34,6 +34,44 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    commissionRate: {
+      type: Number,
+      default: 0.1,
+      min: 0,
+      max: 1,
+    },
+    commissionAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    organizerPayoutAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    payoutStatus: {
+      type: String,
+      enum: ['not_applicable', 'pending', 'processing', 'paid', 'failed'],
+      default: 'not_applicable',
+    },
+    payoutMethod: {
+      type: String,
+      enum: ['none', 'razorpay', 'bank_transfer', 'neft'],
+      default: 'none',
+    },
+    payoutRequestedAt: {
+      type: Date,
+      default: null,
+    },
+    payoutProcessedAt: {
+      type: Date,
+      default: null,
+    },
+    payoutReference: {
+      type: String,
+      default: '',
+    },
     paymentStatus: {
       type: String,
       enum: ['pending', 'completed', 'failed'],
@@ -99,6 +137,18 @@ const orderSchema = new mongoose.Schema(
       default: 'sold',
     },
     notes: String,
+    organizerSettlement: {
+      organizer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+      },
+      event: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event',
+        default: null,
+      },
+    },
     referralSource: {
       type: String,
       default: null,
