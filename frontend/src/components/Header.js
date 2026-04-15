@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const isAdminUser = !!user?.isAdmin;
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -37,47 +38,50 @@ const Header = () => {
         </button>
 
         <div className="hidden items-center gap-10 md:flex">
-          <Link
-            to="/events"
-            className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-          >
-            Events
-          </Link>
-          <Link
-            to="/contact"
-            className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-          >
-            Contact
-          </Link>
-          {isAuthenticated && (
-            <>
-              <Link
-                to="/cart"
-                className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-              >
-                Cart
-              </Link>
-              <Link
-                to="/my-tickets"
-                className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-              >
-                My Tickets
-              </Link>
-              <Link
-                to="/support"
-                className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-              >
-                Support
-              </Link>
-            </>
-          )}
-          {user?.isAdmin && (
+          {isAdminUser ? (
             <Link
               to="/admin"
               className="text-sm font-medium uppercase tracking-wider text-primary transition-colors hover:text-primary/80"
             >
-              Admin
+              Admin Dashboard
             </Link>
+          ) : (
+            <>
+              <Link
+                to="/events"
+                className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+              >
+                Events
+              </Link>
+              <Link
+                to="/contact"
+                className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+              >
+                Contact
+              </Link>
+              {isAuthenticated && (
+                <>
+                  <Link
+                    to="/cart"
+                    className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                  >
+                    Cart
+                  </Link>
+                  <Link
+                    to="/my-tickets"
+                    className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                  >
+                    My Tickets
+                  </Link>
+                  <Link
+                    to="/support"
+                    className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                  >
+                    Support
+                  </Link>
+                </>
+              )}
+            </>
           )}
         </div>
 
@@ -114,53 +118,56 @@ const Header = () => {
       {mobileMenuOpen && (
         <div className="border-t border-white/10 bg-black/95 px-6 py-4 md:hidden">
           <div className="flex flex-col gap-3">
-            <Link
-              to="/events"
-              className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Events
-            </Link>
-            <Link
-              to="/contact"
-              className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Contact
-            </Link>
-            {isAuthenticated && (
-              <>
-                <Link
-                  to="/cart"
-                  className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Cart
-                </Link>
-                <Link
-                  to="/my-tickets"
-                  className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  My Tickets
-                </Link>
-                <Link
-                  to="/support"
-                  className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Support
-                </Link>
-              </>
-            )}
-            {user?.isAdmin && (
+            {isAdminUser ? (
               <Link
                 to="/admin"
                 className="text-sm font-medium uppercase tracking-wider text-primary"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Admin
+                Admin Dashboard
               </Link>
+            ) : (
+              <>
+                <Link
+                  to="/events"
+                  className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Events
+                </Link>
+                <Link
+                  to="/contact"
+                  className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Contact
+                </Link>
+                {isAuthenticated && (
+                  <>
+                    <Link
+                      to="/cart"
+                      className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Cart
+                    </Link>
+                    <Link
+                      to="/my-tickets"
+                      className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      My Tickets
+                    </Link>
+                    <Link
+                      to="/support"
+                      className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Support
+                    </Link>
+                  </>
+                )}
+              </>
             )}
             {isAuthenticated ? (
               <button

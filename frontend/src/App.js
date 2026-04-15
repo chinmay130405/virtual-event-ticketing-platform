@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -28,7 +28,7 @@ import BlackFridayPromo from './pages/BlackFridayPromo';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
 
   if (loading) {
     return (
@@ -38,7 +38,15 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (isAdmin) {
+    return <Navigate to="/admin" />;
+  }
+
+  return children;
 };
 
 // Admin Protected Route
@@ -57,9 +65,24 @@ const AdminRoute = ({ children }) => {
 };
 
 function AppContent() {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const location = useLocation();
+
   useEffect(() => {
     setReferralSource();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center px-5 py-24">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-border-dark border-t-primary"></div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated && isAdmin && location.pathname !== '/admin') {
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <>

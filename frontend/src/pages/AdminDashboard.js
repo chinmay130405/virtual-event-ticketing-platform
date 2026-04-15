@@ -5,6 +5,7 @@ import inventoryService from '../services/inventoryService';
 import crmService from '../services/crmService';
 import erpService from '../services/erpService';
 import orderService from '../services/orderService';
+import supportService from '../services/supportService';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -32,6 +33,14 @@ const AdminDashboard = () => {
   const [erpExpenses, setErpExpenses] = useState([]);
   const [erpResources, setErpResources] = useState([]);
 
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [selectedSupportTicketId, setSelectedSupportTicketId] = useState('');
+  const [selectedSupportTicket, setSelectedSupportTicket] = useState(null);
+  const [supportMessages, setSupportMessages] = useState([]);
+  const [supportReply, setSupportReply] = useState('');
+  const [supportReplyLoading, setSupportReplyLoading] = useState(false);
+  const [supportStatusLoading, setSupportStatusLoading] = useState(false);
+
   useEffect(() => {
     fetchDashboardData();
   }, [activeTab]);
@@ -58,9 +67,25 @@ const AdminDashboard = () => {
         const response = await adminService.getAllOrders({ paymentStatus: 'pending' }, token);
         const filteredOrders = response.orders.filter(order => order.paymentMethod === 'neft');
         setNeftOrders(filteredOrders);
-      } else if (activeTab === 'inventory') {
+      } else if (activeTab === 'events') {
         const response = await inventoryService.getInventoryOverview(token);
         setInventory(response.inventory);
+      } else if (activeTab === 'support') {
+        const response = await supportService.getTickets(token);
+        const tickets = response.tickets || [];
+        setSupportTickets(tickets);
+
+        if (tickets.length > 0) {
+          const ticketIdToLoad = selectedSupportTicketId || tickets[0]._id;
+          const ticketResponse = await supportService.getTicketById(ticketIdToLoad, token);
+          setSelectedSupportTicketId(ticketIdToLoad);
+          setSelectedSupportTicket(ticketResponse.ticket);
+          setSupportMessages(ticketResponse.messages || []);
+        } else {
+          setSelectedSupportTicketId('');
+          setSelectedSupportTicket(null);
+          setSupportMessages([]);
+        }
       } else if (activeTab === 'crm') {
         const response = await crmService.getUsers({ segment: crmSegment });
         setCrmUsers(response.data);
@@ -145,6 +170,65 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadSupportTicketDetails = async (ticketId, token) => {
+    const response = await supportService.getTicketById(ticketId, token);
+    setSelectedSupportTicketId(ticketId);
+    setSelectedSupportTicket(response.ticket);
+    setSupportMessages(response.messages || []);
+  };
+
+  const handleSelectSupportTicket = async (ticketId) => {
+    try {
+      setError('');
+      const token = localStorage.getItem('token');
+      await loadSupportTicketDetails(ticketId, token);
+    } catch (err) {
+      setError(err.message || 'Failed to load support ticket');
+    }
+  };
+
+  const handleAdminSupportReply = async (e) => {
+    e.preventDefault();
+    if (!selectedSupportTicketId || !supportReply.trim()) {
+      return;
+    }
+
+    try {
+      setSupportReplyLoading(true);
+      setError('');
+      setSuccessMsg('');
+      const token = localStorage.getItem('token');
+      await supportService.replyToTicket(selectedSupportTicketId, supportReply.trim(), token);
+      setSupportReply('');
+      setSuccessMsg('Reply sent successfully.');
+      await loadSupportTicketDetails(selectedSupportTicketId, token);
+    } catch (err) {
+      setError(err.message || 'Failed to send support reply');
+    } finally {
+      setSupportReplyLoading(false);
+    }
+  };
+
+  const handleAdminSupportStatusChange = async (status) => {
+    if (!selectedSupportTicketId) {
+      return;
+    }
+
+    try {
+      setSupportStatusLoading(true);
+      setError('');
+      setSuccessMsg('');
+      const token = localStorage.getItem('token');
+      await supportService.updateTicketStatus(selectedSupportTicketId, status, token);
+      setSuccessMsg('Ticket status updated.');
+      await fetchDashboardData();
+    } catch (err) {
+      setError(err.message || 'Failed to update support ticket status');
+    } finally {
+      setSupportStatusLoading(false);
+    }
+  };
+
   const getStockLabel = (status) => {
     if (status === 'in_stock') return 'In Stock';
     if (status === 'low_stock') return 'Low Stock';
@@ -161,9 +245,10 @@ const AdminDashboard = () => {
 
   const tabs = [
     ['dashboard', 'Dashboard'],
+    ['events', 'Events'],
     ['orders', 'Orders'],
     ['neft', 'NEFT Verification'],
-    ['inventory', 'Inventory'],
+    ['support', 'Support'],
     ['users', 'Users'],
     ['analytics', 'Analytics'],
     ['crm', 'CRM'],
@@ -494,7 +579,7 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {activeTab === 'inventory' && (
+            {activeTab === 'events' && (
               <div className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="rounded-xl border border-white/10 bg-surface p-4 text-center">
@@ -517,77 +602,195 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto rounded-2xl border border-white/10 bg-surface">
-                  <table className="min-w-full text-sm">
-                    <thead className="text-slate-400">
-                      <tr>
-                        <th className="px-4 py-3 text-left">Event</th>
-                         <th className="px-4 py-3 text-left">Category</th>
-                        <th className="px-4 py-3 text-left">Price</th>
-                        <th className="px-4 py-3 text-left">Available</th>
-                         <th className="px-4 py-3 text-left">Sold</th>
-                        <th className="px-4 py-3 text-left">Remaining</th>
-                         <th className="px-4 py-3 text-left">Occupancy</th>
-                        <th className="px-4 py-3 text-left">Status</th>
-                        <th className="px-4 py-3 text-left">Adjust</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inventory.map((event) => (
-                        <tr key={event._id} className="border-t border-white/5 text-slate-200">
-                          <td className="px-4 py-3">
-                            <p className="font-semibold">{event.title}</p>
-                            <p className="text-xs text-slate-400">{new Date(event.eventDate).toLocaleDateString()}</p>
-                          </td>
-                          <td className="px-4 py-3 capitalize">{event.category}</td>
-                          <td className="px-4 py-3 font-semibold text-white">₹{event.price}</td>
-                           <td className="px-4 py-3">{event.ticketsAvailable}</td>
-                           <td className="px-4 py-3">{event.ticketsSold}</td>
-                          <td className="px-4 py-3 font-bold text-white">{event.remaining}</td>
-                           <td className="px-4 py-3">{event.occupancy}%</td>
-                          <td className="px-4 py-3">
-                            <span className={`rounded-full border px-2 py-1 text-xs ${stockClass(event.stockStatus)}`}>
-                              {getStockLabel(event.stockStatus)}
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {inventory.map((event) => (
+                    <div key={event._id} className="rounded-2xl border border-white/10 bg-surface p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-lg font-bold text-white">{event.title}</p>
+                          <p className="text-xs text-slate-400">
+                            {new Date(event.eventDate).toLocaleDateString()} · {event.category}
+                          </p>
+                        </div>
+                        <span className={`rounded-full border px-2 py-1 text-xs ${stockClass(event.stockStatus)}`}>
+                          {getStockLabel(event.stockStatus)}
+                        </span>
+                      </div>
+
+                      <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-2">
+                          <p className="text-xs text-slate-400">Price</p>
+                          <p className="font-semibold text-white">₹{event.price}</p>
+                        </div>
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-2">
+                          <p className="text-xs text-slate-400">Occupancy</p>
+                          <p className="font-semibold text-white">{event.occupancy}%</p>
+                        </div>
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-2">
+                          <p className="text-xs text-slate-400">Available</p>
+                          <p className="font-semibold text-white">{event.ticketsAvailable}</p>
+                        </div>
+                        <div className="rounded-lg border border-white/10 bg-black/30 p-2">
+                          <p className="text-xs text-slate-400">Sold</p>
+                          <p className="font-semibold text-white">{event.ticketsSold}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm text-slate-300">
+                          Remaining: <span className="font-bold text-white">{event.remaining}</span>
+                        </p>
+                        {adjustingEventId === event._id ? (
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              value={adjustmentValue}
+                              onChange={(e) => setAdjustmentValue(parseInt(e.target.value, 10) || 0)}
+                              className="w-20 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-sm outline-none focus:border-primary"
+                            />
+                            <button
+                              className="rounded-md bg-primary px-2 py-1 text-xs font-semibold hover:bg-primary/90"
+                              onClick={() => handleAdjustInventory(event._id)}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className="rounded-md border border-white/20 px-2 py-1 text-xs hover:border-white/40"
+                              onClick={() => {
+                                setAdjustingEventId(null);
+                                setAdjustmentValue(0);
+                              }}
+                            >
+                              X
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            className="rounded-md border border-white/20 px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary hover:text-primary"
+                            onClick={() => setAdjustingEventId(event._id)}
+                          >
+                            Adjust Stock
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'support' && (
+              <div className="grid gap-6 lg:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-surface p-5">
+                  <h2 className="mb-4 text-xl font-bold text-white">All Support Tickets</h2>
+
+                  {supportTickets.length === 0 ? (
+                    <p className="text-sm text-slate-400">No support tickets available.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {supportTickets.map((ticket) => (
+                        <button
+                          key={ticket._id}
+                          onClick={() => handleSelectSupportTicket(ticket._id)}
+                          className={`w-full rounded-xl border p-3 text-left transition ${
+                            selectedSupportTicketId === ticket._id
+                              ? 'border-primary/50 bg-primary/10'
+                              : 'border-white/10 bg-black/30 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="mb-1 flex items-center justify-between gap-3">
+                            <p className="text-sm font-bold text-white">{ticket.subject}</p>
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400">
+                              {ticket.priority}
                             </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {adjustingEventId === event._id ? (
-                              <div className="flex gap-2">
-                                <input
-                                  type="number"
-                                  value={adjustmentValue}
-                                  onChange={(e) => setAdjustmentValue(parseInt(e.target.value, 10) || 0)}
-                                  className="w-24 rounded-md border border-white/10 bg-black/40 px-2 py-1 outline-none focus:border-primary"
-                                />
-                                <button
-                                  className="rounded-md bg-primary px-2 py-1 text-xs font-semibold hover:bg-primary/90"
-                                  onClick={() => handleAdjustInventory(event._id)}
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  className="rounded-md border border-white/20 px-2 py-1 text-xs hover:border-white/40"
-                                  onClick={() => {
-                                    setAdjustingEventId(null);
-                                    setAdjustmentValue(0);
-                                  }}
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                className="rounded-md border border-white/20 px-3 py-1.5 text-xs font-semibold hover:border-primary hover:text-primary transition-colors"
-                                onClick={() => setAdjustingEventId(event._id)}
-                              >
-                                Adjust
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            User: {ticket.user?.name || 'Unknown'}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Status: <span className="font-semibold text-primary">{ticket.status}</span>
+                          </p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            Updated {new Date(ticket.updatedAt).toLocaleDateString()}
+                          </p>
+                        </button>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  )}
+                </div>
+
+                <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-surface p-5">
+                  <h2 className="mb-4 text-xl font-bold text-white">Ticket Conversation</h2>
+
+                  {!selectedSupportTicket ? (
+                    <p className="text-sm text-slate-400">Select a ticket to view conversation.</p>
+                  ) : (
+                    <>
+                      <div className="mb-4 rounded-xl border border-white/10 bg-black/30 p-3">
+                        <p className="font-semibold text-white">{selectedSupportTicket.subject}</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          User: {selectedSupportTicket.user?.name || 'Unknown'} ({selectedSupportTicket.user?.email || 'N/A'})
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400">Status: {selectedSupportTicket.status}</p>
+                        {selectedSupportTicket.relatedOrder?.orderNumber && (
+                          <p className="mt-1 text-xs text-slate-400">
+                            Order: {selectedSupportTicket.relatedOrder.orderNumber}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mb-4 flex items-center gap-2">
+                        <select
+                          value={selectedSupportTicket.status}
+                          onChange={(e) => handleAdminSupportStatusChange(e.target.value)}
+                          disabled={supportStatusLoading}
+                          className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                        >
+                          <option value="open">Open</option>
+                          <option value="pending">Pending</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                        {supportStatusLoading && <span className="text-xs text-slate-400">Saving...</span>}
+                      </div>
+
+                      <div className="mb-4 max-h-[320px] space-y-2 overflow-auto rounded-xl border border-white/10 bg-black/20 p-3">
+                        {supportMessages.map((item) => (
+                          <div
+                            key={item._id}
+                            className={`rounded-lg px-3 py-2 text-sm ${
+                              item.isAdminReply
+                                ? 'border border-primary/20 bg-primary/10 text-slate-100'
+                                : 'border border-white/10 bg-black/40 text-slate-200'
+                            }`}
+                          >
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                              {item.sender?.name || 'Unknown'} {item.isAdminReply ? '(Support)' : '(User)'}
+                            </p>
+                            <p>{item.message}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <form onSubmit={handleAdminSupportReply} className="space-y-3">
+                        <textarea
+                          value={supportReply}
+                          onChange={(e) => setSupportReply(e.target.value)}
+                          rows={3}
+                          maxLength={3000}
+                          required
+                          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
+                          placeholder="Write your support reply"
+                        />
+                        <button
+                          type="submit"
+                          disabled={supportReplyLoading}
+                          className="w-full rounded-full border border-primary/30 bg-primary/10 px-5 py-2 text-sm font-bold text-primary"
+                        >
+                          {supportReplyLoading ? 'Sending...' : 'Send Reply'}
+                        </button>
+                      </form>
+                    </>
+                  )}
                 </div>
               </div>
             )}
