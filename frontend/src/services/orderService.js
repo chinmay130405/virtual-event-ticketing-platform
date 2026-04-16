@@ -86,6 +86,21 @@ const orderService = {
       throw error.response?.data || error.message;
     }
   },
+
+  finalizeOrganizerPayout: async (orderId, action, reference, token) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/payouts/${orderId}/finalize`,
+        { action, reference },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default orderService;

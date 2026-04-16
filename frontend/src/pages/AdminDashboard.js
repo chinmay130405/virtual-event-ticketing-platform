@@ -42,6 +42,7 @@ const AdminDashboard = () => {
   const [supportStatusLoading, setSupportStatusLoading] = useState(false);
   const [pendingOrganizers, setPendingOrganizers] = useState([]);
   const [verifyReason, setVerifyReason] = useState('');
+  const [payoutReference, setPayoutReference] = useState('');
 
   useEffect(() => {
     fetchDashboardData();
@@ -142,6 +143,25 @@ const AdminDashboard = () => {
       await fetchOrders();
     } catch (err) {
       setError(err.message || 'Failed to update order status');
+    }
+  };
+
+  const handleFinalizePayout = async (orderId, action) => {
+    try {
+      setError('');
+      setSuccessMsg('');
+      const token = localStorage.getItem('token');
+      const response = await orderService.finalizeOrganizerPayout(
+        orderId,
+        action,
+        payoutReference,
+        token
+      );
+      setSuccessMsg(response.message);
+      setPayoutReference('');
+      await fetchOrders();
+    } catch (err) {
+      setError(err.message || 'Failed to finalize payout');
     }
   };
 
@@ -502,6 +522,29 @@ const AdminDashboard = () => {
                                   >
                                     Re-confirm
                                   </button>
+                                )}
+                                {order.payoutStatus === 'processing' && (
+                                  <>
+                                    <input
+                                      type="text"
+                                      value={payoutReference}
+                                      onChange={(e) => setPayoutReference(e.target.value)}
+                                      placeholder="Payout ref"
+                                      className="w-28 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-xs text-white"
+                                    />
+                                    <button
+                                      className="rounded-md border border-emerald-400/30 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-400/10"
+                                      onClick={() => handleFinalizePayout(order._id, 'mark_paid')}
+                                    >
+                                      Mark Paid
+                                    </button>
+                                    <button
+                                      className="rounded-md border border-red-400/30 px-2 py-1 text-xs text-red-300 hover:bg-red-400/10"
+                                      onClick={() => handleFinalizePayout(order._id, 'mark_failed')}
+                                    >
+                                      Mark Failed
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </td>

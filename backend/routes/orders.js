@@ -17,6 +17,7 @@ const {
   getOrderStats,
   verifyNeftPayment,
   requestOrganizerPayout,
+  finalizeOrganizerPayout,
 } = require('../controllers/orderController');
 
 // Protected user routes
@@ -26,6 +27,7 @@ router.get('/:id', protect, getOrderById);
 router.put('/:id/cancel', protect, cancelOrder);
 router.get('/:orderId/tickets/:ticketId/download', protect, downloadTicket);
 router.post('/payouts/request', protect, requireRole(['organizer']), requestOrganizerPayout);
+router.put('/payouts/:id/finalize', protect, admin, finalizeOrganizerPayout);
 
 // Protected admin routes
 router.get('/', protect, admin, getAllOrders);

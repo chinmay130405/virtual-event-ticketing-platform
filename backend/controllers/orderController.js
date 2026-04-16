@@ -15,6 +15,7 @@ const {
   DEFAULT_PLATFORM_COMMISSION_RATE,
   calculateCommissionBreakdown,
 } = require('../utils/commission');
+const { transitionPayoutStatus } = require('../utils/payoutTransition');
 
 const aggregateOrderTicketQuantities = (order) => {
   const map = new Map();
@@ -683,6 +684,53 @@ exports.requestOrganizerPayout = async (req, res, next) => {
         totalRequested,
         payoutMethod,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Finalize organizer payout status (Admin only)
+ * PUT /api/orders/payouts/:id/finalize
+ */
+exports.finalizeOrganizerPayout = async (req, res, next) => {
+  try {
+    const { action, reference = '' } = req.body;
+
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    const transition = transitionPayoutStatus({
+      currentStatus: order.payoutStatus,
+      action,
+      actorRole: req.user.role || (req.user.isAdmin ? 'admin' : 'user'),
+    });
+
+    if (!transition.allowed) {
+      return res.status(400).json({
+        success: false,
+        message: transition.reason,
+      });
+    }
+
+    order.payoutStatus = transition.nextStatus;
+    order.payoutProcessedAt = new Date();
+    if (reference) {
+      order.payoutReference = String(reference).trim();
+    }
+
+    await order.save({ validateBeforeSave: false });
+
+    return res.status(200).json({
+      success: true,
+      message: `Payout marked as ${transition.nextStatus}`,
+      order,
     });
   } catch (error) {
     next(error);
