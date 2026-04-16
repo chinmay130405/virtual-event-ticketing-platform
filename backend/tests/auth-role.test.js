@@ -13,7 +13,7 @@ test('generateToken includes role claim for admin users', () => {
 
   assert.equal(decoded.id, 'user-1');
   assert.equal(decoded.role, 'admin');
-  assert.equal(decoded.isAdmin, true);
+  assert.equal('isAdmin' in decoded, false);
 });
 
 test('generateToken defaults to user role for regular users', () => {
@@ -22,11 +22,11 @@ test('generateToken defaults to user role for regular users', () => {
 
   assert.equal(decoded.id, 'user-2');
   assert.equal(decoded.role, 'user');
-  assert.equal(decoded.isAdmin, false);
+  assert.equal('isAdmin' in decoded, false);
 });
 
 test('admin middleware allows admin role', () => {
-  const req = { user: { role: 'admin', isAdmin: false } };
+  const req = { user: { role: 'admin' } };
   const res = {
     status() {
       throw new Error('status should not be called for admin role');
@@ -41,11 +41,17 @@ test('admin middleware allows admin role', () => {
   assert.equal(nextCalled, true);
 });
 
-test('admin middleware preserves legacy isAdmin behavior', () => {
-  const req = { user: { role: 'user', isAdmin: true } };
+test('admin middleware rejects non-admin role value', () => {
+  const req = { user: { role: 'organizer' } };
+  const response = {};
   const res = {
-    status() {
-      throw new Error('status should not be called for legacy admin');
+    status(code) {
+      response.code = code;
+      return {
+        json(payload) {
+          response.payload = payload;
+        },
+      };
     },
   };
 
@@ -54,11 +60,13 @@ test('admin middleware preserves legacy isAdmin behavior', () => {
     nextCalled = true;
   });
 
-  assert.equal(nextCalled, true);
+  assert.equal(nextCalled, false);
+  assert.equal(response.code, 403);
+  assert.equal(response.payload.success, false);
 });
 
 test('admin middleware rejects non-admin users', () => {
-  const req = { user: { role: 'user', isAdmin: false } };
+  const req = { user: { role: 'user' } };
   const response = {};
   const res = {
     status(code) {

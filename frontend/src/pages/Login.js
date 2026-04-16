@@ -20,7 +20,7 @@ const Login = () => {
       setLoading(true);
       setError('');
       const response = await login(email, password);
-      const role = response?.user?.role || (response?.user?.isAdmin ? 'admin' : 'user');
+      const role = response?.user?.role || 'user';
       if (role === 'admin') {
         navigate('/admin');
       } else if (role === 'organizer') {

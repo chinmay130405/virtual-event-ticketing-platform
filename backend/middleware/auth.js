@@ -39,7 +39,7 @@ const protect = (req, res, next) => {
 };
 
 /**
- * Check if user is admin
+ * Check if user is admin by role
  */
 const admin = (req, res, next) => {
   if (!isAdminUser(req.user)) {

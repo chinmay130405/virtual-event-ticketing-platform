@@ -6,6 +6,7 @@
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const { normalizeRole, getPublicRegistrationRole } = require('../utils/roles');
+const { buildAuthUserPayload } = require('../utils/authUserPayload');
 const { validateOrganizerRegistration } = require('../utils/organizerVerification');
 const { verifyOrganizerAuthenticity } = require('../utils/organizerAuthenticity');
 
@@ -49,11 +50,6 @@ exports.register = async (req, res, next) => {
       role: getPublicRegistrationRole(role),
     });
 
-    if (user.role === 'admin' && !user.isAdmin) {
-      user.isAdmin = true;
-      await user.save({ validateBeforeSave: false });
-    }
-
     // Generate token
     const token = generateToken(user._id, user.role);
 
@@ -61,13 +57,7 @@ exports.register = async (req, res, next) => {
       success: true,
       message: 'User registered successfully',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isAdmin: user.isAdmin,
-      },
+      user: buildAuthUserPayload(user),
     });
   } catch (error) {
     next(error);
@@ -170,7 +160,7 @@ exports.login = async (req, res, next) => {
 
     // Generate token
     if (!user.role) {
-      user.role = normalizeRole(undefined, user.isAdmin);
+      user.role = normalizeRole(undefined);
       await user.save({ validateBeforeSave: false });
     }
 
@@ -184,13 +174,7 @@ exports.login = async (req, res, next) => {
       success: true,
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isAdmin: user.isAdmin,
-      },
+      user: buildAuthUserPayload(user),
     });
   } catch (error) {
     next(error);
@@ -263,7 +247,6 @@ exports.registerOrganizer = async (req, res, next) => {
       email: email.toLowerCase(),
       password,
       role: 'organizer',
-      isAdmin: false,
       phone: phone || '',
       companyName: String(companyName).trim(),
       gstNumber: String(gstNumber).trim().toUpperCase(),
@@ -290,15 +273,7 @@ exports.registerOrganizer = async (req, res, next) => {
             ? 'Organizer registration rejected. Please contact support.'
             : 'Organizer registration submitted. Awaiting approval.',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isAdmin: user.isAdmin,
-        verificationStatus: user.verificationStatus,
-        verificationReason: user.verificationReason,
-      },
+      user: buildAuthUserPayload(user, { includeVerification: true }),
       authenticity,
     });
   } catch (error) {

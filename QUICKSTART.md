@@ -42,7 +42,7 @@ First, create an admin account by modifying backend and running:
 // In MongoDB directly or through a seeding script
 db.users.updateOne(
   { email: "admin@demo.com" },
-  { $set: { isAdmin: true } }
+  { $set: { role: "admin" } }
 )
 ```
 

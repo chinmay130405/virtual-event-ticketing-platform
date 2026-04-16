@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  const isAdminUser = user?.role === 'admin' || !!user?.isAdmin;
+  const isAdminUser = user?.role === 'admin';
   const isOrganizerUser = user?.role === 'organizer';
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

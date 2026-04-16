@@ -117,7 +117,7 @@ test('Admin token has correct role for finalize endpoint', async () => {
   const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
 
   assert.equal(decoded.role, 'admin', 'Admin token should have admin role');
-  assert.equal(decoded.isAdmin, true, 'Admin token should have isAdmin true');
+  assert.equal('isAdmin' in decoded, false, 'Admin token should not include isAdmin');
 
   // Test the transition with actorRole from token
   const result = transitionPayoutStatus({
@@ -135,7 +135,7 @@ test('Organizer token cannot finalize payout', async () => {
   const decoded = jwt.verify(organizerToken, process.env.JWT_SECRET);
 
   assert.equal(decoded.role, 'organizer', 'Organizer token should have organizer role');
-  assert.equal(decoded.isAdmin, false, 'Organizer token should have isAdmin false');
+  assert.equal('isAdmin' in decoded, false, 'Organizer token should not include isAdmin');
 
   // Test the transition with actorRole from token
   const result = transitionPayoutStatus({
@@ -153,7 +153,7 @@ test('User token cannot finalize payout', async () => {
   const decoded = jwt.verify(userToken, process.env.JWT_SECRET);
 
   assert.equal(decoded.role, 'user', 'User token should have user role');
-  assert.equal(decoded.isAdmin, false, 'User token should have isAdmin false');
+  assert.equal('isAdmin' in decoded, false, 'User token should not include isAdmin');
 
   // Test the transition with actorRole from token
   const result = transitionPayoutStatus({
@@ -196,7 +196,7 @@ test('Finalize controller returns 404 when order does not exist', async () => {
   const req = {
     params: { id: '507f1f77bcf86cd799439011' },
     body: { action: 'mark_paid' },
-    user: { role: 'admin', isAdmin: true },
+    user: { role: 'admin' },
   };
 
   const res = {

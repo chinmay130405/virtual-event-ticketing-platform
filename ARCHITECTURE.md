@@ -187,7 +187,7 @@
 │ name        │         │ title       │
 │ email       │         │ description │
 │ password    │         │ price       │
-│ isAdmin     │         │ createdBy   │
+│ role        │         │ createdBy   │
 └─────────────┘         └─────────────┘
        ▲                      ▲
        │                      │
@@ -220,7 +220,7 @@ const isMatch = await bcrypt.compare(enteredPassword, hashedPassword);
 ```javascript
 // Token generation
 jwt.sign(
-  { id: userId, isAdmin: isAdmin },
+  { id: userId, role: role },
   process.env.JWT_SECRET,
   { expiresIn: '7d' }
 );
@@ -335,7 +335,7 @@ try {
 // AuthContext provides:
 - user: Current user object
 - isAuthenticated: Boolean
-- isAdmin: Boolean
+- isAdmin: Boolean (derived from `user.role === 'admin'`)
 - loading: Loading state
 - login: Function
 - register: Function
@@ -347,7 +347,7 @@ try {
 // JWT Token contains:
 {
   id: "user_id",
-  isAdmin: false,
+  role: "user",
   iat: issued_at,
   exp: expiration_time
 }

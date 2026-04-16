@@ -8,25 +8,15 @@ const jwt = require('jsonwebtoken');
 /**
  * Generate JWT token
  * @param {string} userId - User ID
- * @param {('user'|'organizer'|'admin'|boolean)} roleOrIsAdmin - Role or legacy admin boolean
+ * @param {('user'|'organizer'|'admin')} role - User role
  * @returns {string} JWT token
  */
-const generateToken = (userId, roleOrIsAdmin = 'user') => {
-  let role = 'user';
-
-  if (typeof roleOrIsAdmin === 'boolean') {
-    role = roleOrIsAdmin ? 'admin' : 'user';
-  } else if (roleOrIsAdmin) {
-    role = roleOrIsAdmin;
-  }
-
-  const isAdmin = role === 'admin';
+const generateToken = (userId, role = 'user') => {
 
   return jwt.sign(
     {
       id: userId,
       role,
-      isAdmin,
     },
     process.env.JWT_SECRET,
     {

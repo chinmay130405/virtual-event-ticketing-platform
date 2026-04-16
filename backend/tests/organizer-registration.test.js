@@ -199,7 +199,7 @@ test('Regular user with valid token cannot register as organizer (endpoint shoul
   assert.equal(decoded.role, 'user', 'Token should have user role');
 
   // Test that admin middleware rejects regular user
-  const adminReq = { user: { role: 'user', isAdmin: false } };
+  const adminReq = { user: { role: 'user' } };
   const adminRes = {
     status(code) {
       this.statusCode = code;

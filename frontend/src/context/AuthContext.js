@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const userRole = user?.role || (user?.isAdmin ? 'admin' : 'user');
+  const userRole = user?.role || 'user';
   const isAdmin = userRole === 'admin';
   const isOrganizer = userRole === 'organizer';
 

@@ -14,25 +14,20 @@ test('normalizeRole returns role when valid', () => {
   assert.equal(normalizeRole('user'), 'user');
 });
 
-test('normalizeRole maps legacy isAdmin boolean to role', () => {
-  assert.equal(normalizeRole(undefined, true), 'admin');
-  assert.equal(normalizeRole(undefined, false), 'user');
-});
-
 test('normalizeRole falls back to user for invalid role', () => {
   assert.equal(normalizeRole('super-admin'), 'user');
-  assert.equal(normalizeRole(null, undefined), 'user');
+  assert.equal(normalizeRole(null), 'user');
 });
 
-test('isAdminUser returns true from role or legacy isAdmin', () => {
-  assert.equal(isAdminUser({ role: 'admin', isAdmin: false }), true);
-  assert.equal(isAdminUser({ role: 'user', isAdmin: true }), true);
-  assert.equal(isAdminUser({ role: 'organizer', isAdmin: false }), false);
+test('isAdminUser returns true only for admin role', () => {
+  assert.equal(isAdminUser({ role: 'admin' }), true);
+  assert.equal(isAdminUser({ role: 'user' }), false);
+  assert.equal(isAdminUser({ role: 'organizer' }), false);
 });
 
-test('hasAnyRole checks role membership with legacy fallback', () => {
+test('hasAnyRole checks role membership', () => {
   assert.equal(hasAnyRole({ role: 'organizer' }, ['organizer', 'admin']), true);
-  assert.equal(hasAnyRole({ isAdmin: true }, ['admin']), true);
+  assert.equal(hasAnyRole({ role: undefined }, ['admin']), false);
   assert.equal(hasAnyRole({ role: 'user' }, ['admin', 'organizer']), false);
 });
 

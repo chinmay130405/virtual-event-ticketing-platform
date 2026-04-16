@@ -65,13 +65,12 @@ exports.getUserDetails = async (req, res, next) => {
 exports.updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
-    const normalizedRole = normalizeRole(role, false);
+    const normalizedRole = normalizeRole(role);
 
     const user = await User.findByIdAndUpdate(
       req.params.id,
       {
         role: normalizedRole,
-        isAdmin: normalizedRole === 'admin',
       },
       { new: true, runValidators: true }
     );

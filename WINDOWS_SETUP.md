@@ -243,7 +243,7 @@ db.users.find()
 // Make user admin
 db.users.updateOne(
   { email: "user@example.com" },
-  { $set: { isAdmin: true } }
+  { $set: { role: "admin" } }
 )
 
 // View events

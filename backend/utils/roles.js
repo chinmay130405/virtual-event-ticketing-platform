@@ -1,16 +1,8 @@
 const VALID_ROLES = new Set(['user', 'organizer', 'admin']);
 
-const normalizeRole = (role, isAdmin = false) => {
-  if (isAdmin === true) {
-    return 'admin';
-  }
-
+const normalizeRole = (role) => {
   if (VALID_ROLES.has(role)) {
     return role;
-  }
-
-  if (isAdmin === false) {
-    return 'user';
   }
 
   return 'user';
@@ -21,7 +13,7 @@ const isAdminUser = (user) => {
     return false;
   }
 
-  const normalizedRole = normalizeRole(user.role, user.isAdmin);
+  const normalizedRole = normalizeRole(user.role);
   return normalizedRole === 'admin';
 };
 
@@ -30,12 +22,12 @@ const hasAnyRole = (user, allowedRoles = []) => {
     return false;
   }
 
-  const normalizedRole = normalizeRole(user.role, user.isAdmin);
+  const normalizedRole = normalizeRole(user.role);
   return allowedRoles.includes(normalizedRole);
 };
 
 const getPublicRegistrationRole = (requestedRole) => {
-  const role = normalizeRole(requestedRole, false);
+  const role = normalizeRole(requestedRole);
   return role === 'admin' || role === 'organizer' ? 'user' : role;
 };
 

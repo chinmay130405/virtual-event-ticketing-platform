@@ -887,12 +887,12 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3">
                            <span
                              className={`px-2 py-1 text-xs font-bold uppercase rounded ${
-                               (u.role || (u.isAdmin ? 'admin' : 'user')) === 'admin'
+                               (u.role || 'user') === 'admin'
                                  ? 'bg-primary/20 text-primary border border-primary/30'
                                  : 'bg-white/10 text-slate-300'
                              }`}
                            >
-                              {u.role || (u.isAdmin ? 'admin' : 'user')}
+                               {u.role || 'user'}
                            </span>
                         </td>
                         <td className="px-4 py-3">{new Date(u.createdAt).toLocaleDateString()}</td>

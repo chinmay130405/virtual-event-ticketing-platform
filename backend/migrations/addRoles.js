@@ -1,5 +1,5 @@
 /**
- * Migration: add role to users and align legacy admin flag
+ * Migration: add role to users from legacy data
  * Usage: node migrations/addRoles.js
  */
 
@@ -16,16 +16,14 @@ const run = async () => {
 
     await mongoose.connect(process.env.MONGO_URI);
 
-    const users = await User.find().select('_id role isAdmin');
+    const users = await User.find().select('_id role');
     let updatedCount = 0;
 
     for (const user of users) {
-      const nextRole = normalizeRole(user.role, user.isAdmin);
-      const nextIsAdmin = nextRole === 'admin';
+      const nextRole = normalizeRole(user.role);
 
-      if (user.role !== nextRole || user.isAdmin !== nextIsAdmin) {
+      if (user.role !== nextRole) {
         user.role = nextRole;
-        user.isAdmin = nextIsAdmin;
         await user.save({ validateBeforeSave: false });
         updatedCount += 1;
       }

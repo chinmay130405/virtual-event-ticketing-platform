@@ -14,7 +14,6 @@ const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const { genericLimiter } = require('./middleware/rateLimiter');
 const User = require('./models/User');
-const { normalizeRole } = require('./utils/roles');
 
 const bootstrapAdminAccount = async () => {
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -35,11 +34,9 @@ const bootstrapAdminAccount = async () => {
         password: adminPassword,
         phone: '1234567890',
         role: 'admin',
-        isAdmin: true,
       });
       console.log(`✅ Admin account created: ${adminEmail}`);
-    } else if (!adminUser.isAdmin || normalizeRole(adminUser.role, adminUser.isAdmin) !== 'admin') {
-      adminUser.isAdmin = true;
+    } else if (adminUser.role !== 'admin') {
       adminUser.role = 'admin';
       await adminUser.save();
       console.log(`✅ Admin privileges enabled for: ${adminEmail}`);
@@ -117,9 +114,9 @@ const startServer = async () => {
   app.listen(PORT, () => {
     console.log(`
   ╔═══════════════════════════════════════════════════════╗
-  ║   Virtual Event Ticketing Platform - Backend         ║
-  ║   🚀 Server running on http://localhost:${PORT}        ║
-  ║   🔌 Connected to MongoDB                            ║
+  ║   Virtual Event Ticketing Platform - Backend          ║
+  ║   🚀 Server running on http://localhost:${PORT}       ║
+  ║   🔌 Connected to MongoDB                             ║
   ╚═══════════════════════════════════════════════════════╝
     `);
   });

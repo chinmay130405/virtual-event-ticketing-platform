@@ -709,7 +709,7 @@ exports.finalizeOrganizerPayout = async (req, res, next) => {
     const transition = transitionPayoutStatus({
       currentStatus: order.payoutStatus,
       action,
-      actorRole: req.user.role || (req.user.isAdmin ? 'admin' : 'user'),
+      actorRole: req.user.role || 'user',
     });
 
     if (!transition.allowed) {
