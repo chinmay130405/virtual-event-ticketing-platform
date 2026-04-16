@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import organizerService from '../services/organizerService';
+import authService from '../services/authService';
 
 const OrganizerDashboard = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const OrganizerDashboard = () => {
     ifscCode: '',
     bankName: '',
   });
+  const [isEditingBankDetails, setIsEditingBankDetails] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -46,16 +48,30 @@ const OrganizerDashboard = () => {
         setError('');
 
         const token = localStorage.getItem('token');
-        const [eventsRes, earningsRes, payoutsRes] = await Promise.all([
+        const [eventsRes, earningsRes, payoutsRes, profileRes] = await Promise.all([
           organizerService.getEvents(token),
           organizerService.getEarnings(token),
           organizerService.getPayouts(token),
+          authService.getProfile(token),
         ]);
 
         setEvents(eventsRes.events || []);
         setOrders(earningsRes.orders || []);
         setSummary(earningsRes.summary || {});
         setPayouts(payoutsRes.payouts || []);
+        
+        if (profileRes.user && profileRes.user.bankDetails) {
+          const bd = profileRes.user.bankDetails;
+          setBankDetails({
+            accountHolderName: bd.accountHolderName || '',
+            accountNumber: bd.accountNumber || '',
+            ifscCode: bd.ifscCode || '',
+            bankName: bd.bankName || '',
+          });
+          if (!bd.accountNumber) setIsEditingBankDetails(true);
+        } else {
+          setIsEditingBankDetails(true);
+        }
       } catch (err) {
         setError(err.message || 'Failed to load organizer dashboard');
       } finally {
@@ -84,6 +100,7 @@ const OrganizerDashboard = () => {
       const token = localStorage.getItem('token');
       await organizerService.updateBankDetails(bankDetails, token);
       setSuccessMsg('Bank details updated successfully');
+      setIsEditingBankDetails(false);
     } catch (err) {
       setError(err.message || 'Failed to update bank details');
     }
@@ -232,51 +249,91 @@ const OrganizerDashboard = () => {
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-surface p-5">
-          <h2 className="mb-4 text-xl font-bold text-white">Payout Bank Details</h2>
-
-          <form onSubmit={handleSaveBankDetails} className="grid gap-4 md:grid-cols-2">
-            <input
-              name="accountHolderName"
-              value={bankDetails.accountHolderName}
-              onChange={handleBankChange}
-              placeholder="Account holder name"
-              className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
-              required
-            />
-            <input
-              name="bankName"
-              value={bankDetails.bankName}
-              onChange={handleBankChange}
-              placeholder="Bank name"
-              className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
-              required
-            />
-            <input
-              name="accountNumber"
-              value={bankDetails.accountNumber}
-              onChange={handleBankChange}
-              placeholder="Account number"
-              className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
-              required
-            />
-            <input
-              name="ifscCode"
-              value={bankDetails.ifscCode}
-              onChange={handleBankChange}
-              placeholder="IFSC code"
-              className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 uppercase text-white"
-              required
-            />
-
-            <div className="md:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Payout Bank Details</h2>
+            {!isEditingBankDetails && (
               <button
-                type="submit"
-                className="rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white"
+                onClick={() => setIsEditingBankDetails(true)}
+                className="rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/20"
               >
-                Save Bank Details
+                Edit Bank Details
               </button>
+            )}
+          </div>
+
+          {!isEditingBankDetails ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border border-white/10 bg-black/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-wider text-slate-400">Account Holder</p>
+                <p className="mt-1 font-semibold text-white">{bankDetails.accountHolderName || 'N/A'}</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-wider text-slate-400">Bank Name</p>
+                <p className="mt-1 font-semibold text-white">{bankDetails.bankName || 'N/A'}</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-wider text-slate-400">Account Number</p>
+                <p className="mt-1 font-semibold text-white">{bankDetails.accountNumber ? `****${bankDetails.accountNumber.slice(-4)}` : 'N/A'}</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-wider text-slate-400">IFSC Code</p>
+                <p className="mt-1 font-semibold uppercase text-white">{bankDetails.ifscCode || 'N/A'}</p>
+              </div>
             </div>
-          </form>
+          ) : (
+            <form onSubmit={handleSaveBankDetails} className="grid gap-4 md:grid-cols-2">
+              <input
+                name="accountHolderName"
+                value={bankDetails.accountHolderName}
+                onChange={handleBankChange}
+                placeholder="Account holder name"
+                className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
+                required
+              />
+              <input
+                name="bankName"
+                value={bankDetails.bankName}
+                onChange={handleBankChange}
+                placeholder="Bank name"
+                className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
+                required
+              />
+              <input
+                name="accountNumber"
+                value={bankDetails.accountNumber}
+                onChange={handleBankChange}
+                placeholder="Account number"
+                className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
+                required
+              />
+              <input
+                name="ifscCode"
+                value={bankDetails.ifscCode}
+                onChange={handleBankChange}
+                placeholder="IFSC code"
+                className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 uppercase text-white"
+                required
+              />
+
+              <div className="flex items-center gap-3 md:col-span-2">
+                <button
+                  type="submit"
+                  className="rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary/90"
+                >
+                  Save Bank Details
+                </button>
+                {bankDetails.accountNumber && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingBankDetails(false)}
+                    className="rounded-full border border-white/20 bg-transparent px-6 py-2.5 text-sm font-bold text-white hover:bg-white/5"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>
