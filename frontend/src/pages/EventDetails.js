@@ -5,28 +5,313 @@ import eventService from '../services/eventService';
 import cartService from '../services/cartService';
 import SEO from '../components/SEO';
 
-const highlights = [
-  {
-    icon: 'headset',
-    title: 'Live DJ Sets',
-    description: 'Top-tier international lineup performing live.',
+const EVENT_BANNER_FALLBACK =
+  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80';
+
+const CATEGORY_UI_CONTENT = {
+  Technology: {
+    venueImage:
+      'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=900&q=80',
+    tags: ['Workshop', 'HandsOn', 'TechCommunity'],
+    highlights: [
+      {
+        icon: 'code',
+        title: 'Live Coding Sessions',
+        description: 'Real-time implementation of concepts with guided explanations.',
+      },
+      {
+        icon: 'devices',
+        title: 'Tooling Demos',
+        description: 'See practical workflows and modern tooling in action.',
+      },
+      {
+        icon: 'groups',
+        title: 'Expert Q&A',
+        description: 'Ask architecture and implementation questions directly.',
+      },
+      {
+        icon: 'school',
+        title: 'Take-home Resources',
+        description: 'Get templates, checklists, and follow-up practice material.',
+      },
+    ],
   },
-  {
-    icon: 'wine_bar',
-    title: 'VIP Lounge',
-    description: 'Exclusive lounge with premium bar service.',
+  Business: {
+    venueImage:
+      'https://images.unsplash.com/photo-1552664730-d307ca884978?w=900&q=80',
+    tags: ['Leadership', 'Networking', 'Strategy'],
+    highlights: [
+      {
+        icon: 'monitoring',
+        title: 'Strategy Sessions',
+        description: 'Actionable playbooks from business and product leaders.',
+      },
+      {
+        icon: 'handshake',
+        title: 'Networking Hours',
+        description: 'Curated networking with founders, operators, and mentors.',
+      },
+      {
+        icon: 'insights',
+        title: 'Market Insights',
+        description: 'Data-backed trends and practical growth opportunities.',
+      },
+      {
+        icon: 'task_alt',
+        title: 'Execution Templates',
+        description: 'Frameworks you can apply to your team immediately.',
+      },
+    ],
   },
-  {
-    icon: 'restaurant',
-    title: 'Food & Drinks',
-    description: 'Curated selection of gourmet event food.',
+  Education: {
+    venueImage:
+      'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=900&q=80',
+    tags: ['Learning', 'Mentorship', 'SkillBuilding'],
+    highlights: [
+      {
+        icon: 'menu_book',
+        title: 'Structured Learning Tracks',
+        description: 'Step-by-step modules from fundamentals to advanced topics.',
+      },
+      {
+        icon: 'co_present',
+        title: 'Mentor-led Workshops',
+        description: 'Learn directly from instructors with practical exercises.',
+      },
+      {
+        icon: 'quiz',
+        title: 'Interactive Assessments',
+        description: 'Check your understanding with guided checkpoints.',
+      },
+      {
+        icon: 'workspace_premium',
+        title: 'Completion Certificate',
+        description: 'Receive recognition for your learning milestones.',
+      },
+    ],
   },
-  {
-    icon: 'shopping_bag',
-    title: 'Merch Booth',
-    description: 'Limited edition festival gear available.',
+  Entertainment: {
+    venueImage:
+      'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=900&q=80',
+    tags: ['Entertainment', 'Performance', 'Community'],
+    highlights: [
+      {
+        icon: 'mic',
+        title: 'Main Stage Performance',
+        description: 'Experience high-energy acts and curated performances.',
+      },
+      {
+        icon: 'theater_comedy',
+        title: 'Creative Showcases',
+        description: 'Discover original acts and emerging talent.',
+      },
+      {
+        icon: 'photo_camera',
+        title: 'Interactive Installations',
+        description: 'Immersive spaces designed for audience engagement.',
+      },
+      {
+        icon: 'local_activity',
+        title: 'Fan Experience Zones',
+        description: 'Explore exclusive activities and event memorabilia.',
+      },
+    ],
   },
-];
+  Sports: {
+    venueImage:
+      'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=900&q=80',
+    tags: ['Sports', 'Performance', 'Competition'],
+    highlights: [
+      {
+        icon: 'sports_soccer',
+        title: 'Live Match Insights',
+        description: 'Breakdowns and tactical perspectives from experts.',
+      },
+      {
+        icon: 'fitness_center',
+        title: 'Performance Clinics',
+        description: 'Learn training methods and athlete best practices.',
+      },
+      {
+        icon: 'emoji_events',
+        title: 'Competitive Challenges',
+        description: 'Participate in skill-based contests and mini-events.',
+      },
+      {
+        icon: 'sports_score',
+        title: 'Fan Engagement',
+        description: 'Interactive sports zones with community activities.',
+      },
+    ],
+  },
+  Other: {
+    venueImage:
+      'https://images.unsplash.com/photo-1511578314322-379afb476865?w=900&q=80',
+    tags: ['Event', 'Community', 'Experience'],
+    highlights: [
+      {
+        icon: 'event',
+        title: 'Curated Sessions',
+        description: 'Well-structured sessions designed for maximum value.',
+      },
+      {
+        icon: 'forum',
+        title: 'Community Interactions',
+        description: 'Connect with peers and professionals from your domain.',
+      },
+      {
+        icon: 'explore',
+        title: 'Activity Zones',
+        description: 'Explore interactive sections throughout the venue.',
+      },
+      {
+        icon: 'verified',
+        title: 'Trusted Experience',
+        description: 'Smooth entry, organized flow, and attendee support.',
+      },
+    ],
+  },
+};
+
+const ONLINE_EVENT_CONTENT = {
+  venueImage: 'https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?w=900&q=80',
+  tags: ['Online', 'LiveStream', 'Interactive'],
+  highlights: [
+    {
+      icon: 'live_tv',
+      title: 'HD Live Stream',
+      description: 'Join from anywhere with stable high-quality event streaming.',
+    },
+    {
+      icon: 'chat',
+      title: 'Live Chat & Q&A',
+      description: 'Participate in real-time discussions and audience questions.',
+    },
+    {
+      icon: 'schedule',
+      title: 'Session Replays',
+      description: 'Revisit key sessions later with on-demand replay access.',
+    },
+    {
+      icon: 'verified_user',
+      title: 'Secure Access',
+      description: 'Unique ticket-based entry with secure stream authentication.',
+    },
+  ],
+};
+
+const getEventDisplayContent = (event) => {
+  const isOnlineEvent =
+    event?.eventMode === 'online' || /online|virtual|stream/i.test(String(event?.location || ''));
+
+  if (isOnlineEvent) {
+    const titleTags = String(event?.title || '')
+      .split(/\s+/)
+      .filter((word) => word.length > 3)
+      .slice(0, 1)
+      .map((word) => word.replace(/[^a-zA-Z0-9]/g, ''))
+      .filter(Boolean);
+
+    const tags = [...ONLINE_EVENT_CONTENT.tags, ...titleTags]
+      .map((tag) => String(tag).replace(/\s+/g, ''))
+      .filter(Boolean)
+      .filter((tag, index, arr) => arr.indexOf(tag) === index)
+      .slice(0, 3);
+
+    return {
+      venueImage: ONLINE_EVENT_CONTENT.venueImage,
+      highlights: ONLINE_EVENT_CONTENT.highlights,
+      tags,
+    };
+  }
+
+  const category = event?.category || 'Other';
+  const fallbackContent = CATEGORY_UI_CONTENT.Other;
+  const categoryContent = CATEGORY_UI_CONTENT[category] || fallbackContent;
+
+  const titleTags = String(event?.title || '')
+    .split(/\s+/)
+    .filter((word) => word.length > 3)
+    .slice(0, 2)
+    .map((word) => word.replace(/[^a-zA-Z0-9]/g, ''))
+    .filter(Boolean);
+
+  const tags = [category, ...titleTags, ...(categoryContent.tags || [])]
+    .map((tag) => String(tag).replace(/\s+/g, ''))
+    .filter(Boolean)
+    .filter((tag, index, arr) => arr.indexOf(tag) === index)
+    .slice(0, 3);
+
+  return {
+    venueImage: categoryContent.venueImage,
+    highlights: categoryContent.highlights,
+    tags,
+  };
+};
+
+const getVenueContext = (event) => {
+  const isOnlineEvent =
+    event?.eventMode === 'online' || /online|virtual|stream/i.test(String(event?.location || ''));
+
+  if (isOnlineEvent) {
+    return {
+      summary:
+        'This event is fully online. You will receive secure streaming access, live interaction features, and replay availability for registered attendees.',
+      cta: 'View Streaming Access Guide',
+      sectionTitle: 'About Online Access',
+    };
+  }
+
+  const explicitVenueDescription = event?.venueDescription?.trim();
+  if (explicitVenueDescription) {
+    return {
+      summary: explicitVenueDescription,
+      cta: 'View Venue Access & Parking',
+      sectionTitle: 'About the Venue',
+    };
+  }
+
+  const category = event?.category || 'Other';
+  const location = event?.location || 'India';
+
+  if (category === 'Technology') {
+    return {
+      summary: `Hosted at ${location}, this tech-focused venue offers high-speed connectivity, modern AV systems, and dedicated demo zones for live coding and product showcases.`,
+      cta: 'View Venue Access & Parking',
+      sectionTitle: 'About the Venue',
+    };
+  }
+
+  if (category === 'Business') {
+    return {
+      summary: `At ${location}, attendees can expect premium conference seating, networking lounges, and business-ready meeting spaces for collaborative sessions.`,
+      cta: 'View Business Lounge & Access',
+      sectionTitle: 'About the Venue',
+    };
+  }
+
+  if (category === 'Education') {
+    return {
+      summary: `The learning-friendly setup at ${location} includes workshop areas, guided learning stations, and comfortable seating for long-form sessions.`,
+      cta: 'View Campus Layout & Access',
+      sectionTitle: 'About the Venue',
+    };
+  }
+
+  if (category === 'Entertainment' || category === 'Sports') {
+    return {
+      summary: `${location} is equipped with immersive staging, dynamic lighting, and audience-friendly zones crafted for high-energy experiences.`,
+      cta: 'View Entry Gates & Facilities',
+      sectionTitle: 'About the Venue',
+    };
+  }
+
+  return {
+    summary: `${location} provides a comfortable event setup with seamless entry, reliable amenities, and an engaging atmosphere for attendees.`,
+    cta: 'View Venue Details',
+    sectionTitle: 'About the Venue',
+  };
+};
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -109,11 +394,19 @@ const EventDetails = () => {
     );
   }
 
-  const ticketPrice = event.price || 49.99;
+  const ticketPrice = event.effectivePrice || event.price || 49.99;
+  const originalPrice = event.price || ticketPrice;
+  const hasDiscount = Number(event.discountPercent || 0) > 0;
   const totalPrice = ticketPrice * quantity;
   const soldTickets = event.ticketsSold || 0;
   const reservedTickets = event.ticketsReserved || 0;
   const availableTickets = event.ticketsAvailable - soldTickets - reservedTickets;
+  const organizerName =
+    event.organizerName || event.createdBy?.name || event.speaker || 'Event Host';
+  const venueContext = getVenueContext(event);
+  const displayContent = getEventDisplayContent(event);
+  const isOnlineEvent =
+    event.eventMode === 'online' || /online|virtual|stream/i.test(String(event.location || ''));
 
   return (
     <div>
@@ -141,8 +434,12 @@ const EventDetails = () => {
         <div className="absolute inset-0 z-10 bg-primary/10 mix-blend-color"></div>
         <img
           className="h-full w-full object-cover"
-          src={event.bannerImage || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200'}
+          src={event.bannerImage || EVENT_BANNER_FALLBACK}
           alt={event.title}
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = EVENT_BANNER_FALLBACK;
+          }}
         />
         <div className="absolute bottom-0 left-0 z-20 w-full pb-12">
           <div className="mx-auto max-w-[1200px] px-4">
@@ -178,7 +475,7 @@ const EventDetails = () => {
                       year: 'numeric',
                     })}
                   </p>
-                  <p className="text-sm text-slate-500">{event.eventTime || '8:00 PM EST'}</p>
+                  <p className="text-sm text-slate-500">{event.eventTime || '8:00 PM IST'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -186,8 +483,12 @@ const EventDetails = () => {
                   <span className="material-symbols-outlined">location_on</span>
                 </div>
                 <div>
-                  <p className="font-bold text-white">{event.location || 'Global Streaming'}</p>
-                  <p className="text-sm text-slate-500">Virtual Event</p>
+                  <p className="font-bold text-white">
+                    {isOnlineEvent ? 'Online' : (event.location || 'Venue TBA')}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {isOnlineEvent ? 'Online Event' : 'In-Person Event'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -204,11 +505,18 @@ const EventDetails = () => {
                 <p className="text-xs font-bold uppercase tracking-tighter text-slate-500">
                   Organized by
                 </p>
-                <p className="font-bold text-white">{event.createdBy?.name || 'EventVibe Team'}</p>
+                <p className="font-bold text-white">{organizerName}</p>
               </div>
               <button className="rounded-lg border border-primary/20 px-4 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary/10">
                 Follow
               </button>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-card-dark px-4 py-3">
+              <span className="material-symbols-outlined text-primary">event_seat</span>
+              <p className="text-sm text-slate-300">
+                Available Seats: <span className="font-bold text-white">{Math.max(availableTickets, 0)}</span>
+              </p>
             </div>
           </div>
 
@@ -227,22 +535,21 @@ const EventDetails = () => {
           </div>
 
           <div className="rounded-2xl border border-white/5 bg-card-dark p-8">
-            <h3 className="mb-6 text-xl font-bold text-white">About the Venue</h3>
+            <h3 className="mb-6 text-xl font-bold text-white">{venueContext.sectionTitle}</h3>
             <div className="flex flex-col gap-6 md:flex-row">
               <div className="h-40 overflow-hidden rounded-xl md:w-1/3">
                 <img
                   className="h-full w-full object-cover"
-                  src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400"
+                  src={displayContent.venueImage}
                   alt="Venue"
                 />
               </div>
               <div className="flex-1 space-y-3">
                 <p className="text-slate-300">
-                  Premium venue production and immersive effects designed for an unforgettable
-                  event experience.
+                  {venueContext.summary}
                 </p>
                 <button className="flex items-center gap-2 text-sm font-bold uppercase text-primary">
-                  View Map &amp; Parking
+                  {venueContext.cta}
                   <span className="material-symbols-outlined text-sm">arrow_forward</span>
                 </button>
               </div>
@@ -250,15 +557,14 @@ const EventDetails = () => {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
-              #{event.category}
-            </span>
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
-              #Live
-            </span>
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
-              #Nightlife
-            </span>
+            {displayContent.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary"
+              >
+                #{tag}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -272,7 +578,14 @@ const EventDetails = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-bold text-white">General Admission</p>
-                    <p className="text-sm font-bold text-primary">${ticketPrice}</p>
+                    {hasDiscount && (
+                      <p className="text-xs text-slate-500 line-through">₹{originalPrice}</p>
+                    )}
+                    <p className="text-sm font-bold text-primary">₹{ticketPrice}</p>
+                    <p className="text-xs text-slate-500">
+                      Platform fee (30%): ₹{(ticketPrice * 0.3).toFixed(2)} per ticket
+                    </p>
+                    <p className="text-xs text-slate-500">{Math.max(availableTickets, 0)} seats left</p>
                   </div>
                   <span className="rounded bg-primary/20 px-2 py-0.5 text-[10px] font-black uppercase text-primary">
                     Available
@@ -308,7 +621,7 @@ const EventDetails = () => {
                     disabled={addingToCart}
                     className="w-full rounded-xl bg-primary py-4 font-black uppercase tracking-widest text-white shadow-lg shadow-primary/30 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {addingToCart ? 'Adding...' : 'Buy Tickets Now'}
+                    {addingToCart ? 'Adding...' : 'Add to Cart'}
                   </button>
                 </div>
               ) : (
@@ -342,7 +655,7 @@ const EventDetails = () => {
           <span className="text-primary">{'//'}</span> Event Highlights
         </h3>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {highlights.map((highlight) => (
+          {displayContent.highlights.map((highlight) => (
             <div
               key={highlight.title}
               className="group rounded-2xl border border-white/5 bg-card-dark p-8 transition-colors hover:border-primary/30"

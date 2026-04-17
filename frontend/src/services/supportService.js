@@ -70,6 +70,21 @@ const supportService = {
       throw error.response?.data || error.message;
     }
   },
+
+  updateTicketPriority: async (ticketId, priority, token) => {
+    try {
+      const response = await axios.patch(
+        `${API_URL}/${ticketId}/priority`,
+        { priority },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default supportService;

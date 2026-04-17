@@ -26,6 +26,8 @@ import OrganizerDashboard from './pages/OrganizerDashboard';
 import Contact from './pages/Contact';
 import SummerPromo from './pages/SummerPromo';
 import BlackFridayPromo from './pages/BlackFridayPromo';
+import CreateEventIntro from './pages/CreateEventIntro';
+import ClientEventManager from './pages/ClientEventManager';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -79,6 +81,20 @@ const OrganizerRoute = ({ children }) => {
   return isAuthenticated && isOrganizer ? children : <Navigate to="/" />;
 };
 
+const ClientRoute = ({ children }) => {
+  const { isAuthenticated, isClient, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center px-5 py-24">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-border-dark border-t-primary"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated && isClient ? children : <Navigate to="/login" />;
+};
+
 function AppContent() {
   const { isAuthenticated, isAdmin, isOrganizer, loading } = useAuth();
   const location = useLocation();
@@ -114,6 +130,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/contact" element={<Contact />} />
+  <Route path="/create-event" element={<CreateEventIntro />} />
         <Route path="/promo/summer" element={<SummerPromo />} />
         <Route path="/promo/black-friday" element={<BlackFridayPromo />} />
 
@@ -174,6 +191,14 @@ function AppContent() {
             <OrganizerRoute>
               <OrganizerDashboard />
             </OrganizerRoute>
+          }
+        />
+        <Route
+          path="/client/events"
+          element={
+            <ClientRoute>
+              <ClientEventManager />
+            </ClientRoute>
           }
         />
 

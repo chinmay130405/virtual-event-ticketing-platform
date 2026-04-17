@@ -19,6 +19,11 @@ const ticketSchema = new mongoose.Schema({
   eventDate: Date,
   eventTime: String,
   quantity: Number,
+  unitPrice: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -32,6 +37,44 @@ const orderSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    subtotalAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    couponCode: {
+      type: String,
+      default: '',
+      trim: true,
+      uppercase: true,
+    },
+    couponOwner: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    couponDiscountPercent: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 20,
+    },
+    couponDiscountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    userPlatformFeeRate: {
+      type: Number,
+      default: 0.02,
+      min: 0,
+      max: 1,
+    },
+    userPlatformFeeAmount: {
+      type: Number,
+      default: 0,
       min: 0,
     },
     commissionRate: {

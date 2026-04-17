@@ -8,6 +8,8 @@ const SupportTicket = require('../models/SupportTicket');
 const TicketMessage = require('../models/TicketMessage');
 const { isAdminUser } = require('../utils/roles');
 
+const SUPPORT_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+
 /**
  * Create a new support ticket
  * POST /api/support
@@ -47,7 +49,10 @@ exports.createTicket = async (req, res, next) => {
       user: req.user.id,
       subject,
       description,
-      priority: priority || 'medium',
+      priority:
+        isAdminUser(req.user) && SUPPORT_PRIORITIES.includes(String(priority || '').toLowerCase())
+          ? String(priority).toLowerCase()
+          : 'medium',
       relatedOrder,
     });
 
@@ -60,7 +65,7 @@ exports.createTicket = async (req, res, next) => {
 
     const populatedTicket = await SupportTicket.findById(ticket._id)
       .populate('user', 'name email')
-      .populate('relatedOrder', 'orderNumber');
+      .populate('relatedOrder', 'orderNumber tickets.eventTitle');
 
     res.status(201).json({
       success: true,
@@ -82,7 +87,7 @@ exports.getTickets = async (req, res, next) => {
 
     const tickets = await SupportTicket.find(filter)
       .populate('user', 'name email')
-      .populate('relatedOrder', 'orderNumber')
+      .populate('relatedOrder', 'orderNumber tickets.eventTitle')
       .sort({ updatedAt: -1 });
 
     res.status(200).json({
@@ -103,7 +108,7 @@ exports.getTicketById = async (req, res, next) => {
   try {
     const ticket = await SupportTicket.findById(req.params.id)
       .populate('user', 'name email')
-      .populate('relatedOrder', 'orderNumber');
+      .populate('relatedOrder', 'orderNumber tickets.eventTitle');
 
     if (!ticket) {
       return res.status(404).json({
@@ -127,6 +132,42 @@ exports.getTicketById = async (req, res, next) => {
       success: true,
       ticket,
       messages,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update support ticket priority (Admin only)
+ * PATCH /api/support/:id/priority
+ */
+exports.updateTicketPriority = async (req, res, next) => {
+  try {
+    const { priority } = req.body;
+
+    if (!priority || !SUPPORT_PRIORITIES.includes(String(priority).toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid priority. Must be one of: ${SUPPORT_PRIORITIES.join(', ')}`,
+      });
+    }
+
+    const ticket = await SupportTicket.findById(req.params.id);
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket not found',
+      });
+    }
+
+    ticket.priority = String(priority).toLowerCase();
+    await ticket.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Issue priority updated successfully',
+      ticket,
     });
   } catch (error) {
     next(error);

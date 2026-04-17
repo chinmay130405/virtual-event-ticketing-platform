@@ -27,7 +27,6 @@ const SupportCenter = () => {
   const [ticketForm, setTicketForm] = useState({
     subject: '',
     description: '',
-    priority: 'medium',
     relatedOrderId: '',
   });
   const [replyMessage, setReplyMessage] = useState('');
@@ -86,13 +85,12 @@ const SupportCenter = () => {
       setTicketForm({
         subject: '',
         description: '',
-        priority: 'medium',
         relatedOrderId: '',
       });
-      setSuccessMsg('Support ticket created successfully.');
+      setSuccessMsg('Issue reported successfully.');
       await refreshTickets();
     } catch (err) {
-      setError(err.message || 'Failed to create support ticket');
+      setError(err.message || 'Failed to report issue');
     } finally {
       setFormLoading(false);
     }
@@ -168,9 +166,9 @@ const SupportCenter = () => {
     <div className="px-6 py-12">
       <div className="mx-auto max-w-[1200px]">
         <div className="mb-6">
-          <h1 className="text-4xl font-black text-white">Support Center</h1>
+          <h1 className="text-4xl font-black text-white">Issue Support Center</h1>
           <p className="mt-2 text-slate-400">
-            Create support tickets, track updates, and chat with the support team.
+            Report issues, track updates, and chat with the support team.
           </p>
         </div>
 
@@ -187,7 +185,7 @@ const SupportCenter = () => {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-surface p-5">
-            <h2 className="mb-4 text-xl font-bold text-white">New Ticket</h2>
+            <h2 className="mb-4 text-xl font-bold text-white">Report Issue</h2>
 
             <form onSubmit={handleCreateTicket} className="space-y-4">
               <div>
@@ -206,22 +204,7 @@ const SupportCenter = () => {
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Priority
-                </label>
-                <select
-                  value={ticketForm.priority}
-                  onChange={(e) => setTicketForm((prev) => ({ ...prev, priority: e.target.value }))}
-                  className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-white"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Related Order (optional)
+                  Related Order / Event (optional)
                 </label>
                 <select
                   value={ticketForm.relatedOrderId}
@@ -233,7 +216,7 @@ const SupportCenter = () => {
                   <option value="">No related order</option>
                   {orders.map((order) => (
                     <option key={order._id} value={order._id}>
-                      {order.orderNumber}
+                      {order.orderNumber} • {Array.from(new Set((order.tickets || []).map((t) => t.eventTitle).filter(Boolean))).join(', ') || 'Event'}
                     </option>
                   ))}
                 </select>
@@ -261,16 +244,16 @@ const SupportCenter = () => {
                 disabled={formLoading}
                 className="w-full rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white"
               >
-                {formLoading ? 'Creating...' : 'Create Ticket'}
+                {formLoading ? 'Reporting...' : 'Report Issue'}
               </button>
             </form>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-surface p-5">
-            <h2 className="mb-4 text-xl font-bold text-white">Your Tickets</h2>
+            <h2 className="mb-4 text-xl font-bold text-white">Your Issues</h2>
 
             {tickets.length === 0 ? (
-              <p className="text-sm text-slate-400">No support tickets yet.</p>
+              <p className="text-sm text-slate-400">No reported issues yet.</p>
             ) : (
               <div className="space-y-3">
                 {tickets.map((ticket) => (
@@ -290,8 +273,13 @@ const SupportCenter = () => {
                       </span>
                     </div>
                     <p className="text-xs text-slate-400">
-                      Status: <span className="font-semibold text-primary">{ticket.status}</span>
+                      Issue Status: <span className="font-semibold text-primary">{ticket.status}</span>
                     </p>
+                    {ticket.relatedOrder?.orderNumber && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Ref: {ticket.relatedOrder.orderNumber} • {Array.from(new Set((ticket.relatedOrder.tickets || []).map((t) => t.eventTitle).filter(Boolean))).join(', ') || 'Event/Course'}
+                      </p>
+                    )}
                     <p className="mt-1 text-xs text-slate-400">
                       Updated {new Date(ticket.updatedAt).toLocaleDateString()}
                     </p>
@@ -302,18 +290,19 @@ const SupportCenter = () => {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-surface p-5">
-            <h2 className="mb-4 text-xl font-bold text-white">Ticket Conversation</h2>
+            <h2 className="mb-4 text-xl font-bold text-white">Issue Conversation</h2>
 
             {!selectedTicket ? (
-              <p className="text-sm text-slate-400">Select a ticket to view conversation.</p>
+              <p className="text-sm text-slate-400">Select an issue to view conversation.</p>
             ) : (
               <>
                 <div className="mb-4 rounded-xl border border-white/10 bg-black/30 p-3">
                   <p className="font-semibold text-white">{selectedTicket.subject}</p>
-                  <p className="mt-1 text-xs text-slate-400">Status: {selectedTicket.status}</p>
+                  <p className="mt-1 text-xs text-slate-400">Issue Status: {selectedTicket.status}</p>
+                  <p className="mt-1 text-xs text-slate-400">Priority: {selectedTicket.priority}</p>
                   {selectedTicket.relatedOrder?.orderNumber && (
                     <p className="mt-1 text-xs text-slate-400">
-                      Order: {selectedTicket.relatedOrder.orderNumber}
+                      Related: {selectedTicket.relatedOrder.orderNumber} • {Array.from(new Set((selectedTicket.relatedOrder.tickets || []).map((t) => t.eventTitle).filter(Boolean))).join(', ') || 'Event/Course'}
                     </p>
                   )}
                 </div>

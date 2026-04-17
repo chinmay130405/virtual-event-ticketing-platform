@@ -15,7 +15,14 @@ const {
   DEFAULT_PLATFORM_COMMISSION_RATE,
   calculateCommissionBreakdown,
 } = require('../utils/commission');
+const { calculateCheckoutPricing } = require('../utils/coupons');
 const { transitionPayoutStatus } = require('../utils/payoutTransition');
+
+const getEffectiveEventPrice = (event) => {
+  const basePrice = Math.max(0, Number(event?.price) || 0);
+  const discountPercent = Math.min(80, Math.max(0, Number(event?.discountPercent) || 0));
+  return Number((basePrice * (1 - discountPercent / 100)).toFixed(2));
+};
 
 const aggregateOrderTicketQuantities = (order) => {
   const map = new Map();
@@ -73,6 +80,7 @@ exports.checkout = async (req, res, next) => {
       razorpayOrderId,
       razorpaySignature,
       neftReferenceNumber,
+      couponCode,
     } = req.body;
 
     if (!attendeeEmail || !attendeeName) {
@@ -154,7 +162,13 @@ exports.checkout = async (req, res, next) => {
       neftReferenceNumber: neftReferenceNumber || '',
       neftVerificationStatus: isNeft ? 'pending' : undefined,
       ticketsInventoryState: isNeft ? 'reserved' : 'sold',
+  subtotalAmount: 0,
       totalAmount: 0,
+  couponCode: '',
+  couponOwner: '',
+  couponDiscountPercent: 0,
+  couponDiscountAmount: 0,
+  userPlatformFeeAmount: 0,
       commissionRate: DEFAULT_PLATFORM_COMMISSION_RATE,
       commissionAmount: 0,
       organizerPayoutAmount: 0,
@@ -189,11 +203,13 @@ exports.checkout = async (req, res, next) => {
           eventDate: event.eventDate,
           eventTime: event.eventTime,
           quantity: 1,
+          unitPrice: getEffectiveEventPrice(event),
         });
       }
 
-      const lineTotal = event.price * item.quantity;
-      orderData.totalAmount += lineTotal;
+      const effectivePrice = getEffectiveEventPrice(event);
+      const lineTotal = effectivePrice * item.quantity;
+  orderData.subtotalAmount += lineTotal;
 
       if (event.organizer) {
         const breakdown = calculateCommissionBreakdown({
@@ -214,6 +230,20 @@ exports.checkout = async (req, res, next) => {
         }
       }
     }
+
+    const pricing = calculateCheckoutPricing({
+      subtotal: orderData.subtotalAmount,
+      couponCode,
+    });
+
+    orderData.subtotalAmount = pricing.subtotal;
+    orderData.totalAmount = pricing.payableAmount;
+    orderData.couponCode = pricing.couponCode;
+    orderData.couponOwner = pricing.couponOwner;
+    orderData.couponDiscountPercent = pricing.couponDiscountPercent;
+    orderData.couponDiscountAmount = pricing.couponDiscountAmount;
+    orderData.userPlatformFeeRate = pricing.userPlatformFeeRate;
+    orderData.userPlatformFeeAmount = pricing.userPlatformFeeAmount;
 
     orderData.tickets = tickets;
     orderData.commissionAmount = commissionAmount;

@@ -25,6 +25,8 @@ const Login = () => {
         navigate('/admin');
       } else if (role === 'organizer') {
         navigate('/organizer');
+      } else if (role === 'client') {
+        navigate('/client/events');
       } else {
         navigate('/');
       }
@@ -89,8 +91,8 @@ const Login = () => {
         </p>
 
         <div className="mt-6 rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-xs text-slate-400">
-          <p className="mb-1 font-semibold uppercase tracking-wide text-slate-300">Demo User</p>
-          <code>user@demo.com / password</code>
+          <p className="mb-1 font-semibold uppercase tracking-wide text-slate-300">Demo Client</p>
+          <code>client@gmail.com / password</code>
         </div>
       </div>
     </div>

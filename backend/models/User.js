@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'organizer', 'admin'],
+      enum: ['user', 'organizer', 'admin', 'client'],
       default: 'user',
     },
     commissionRate: {

@@ -5,6 +5,17 @@ import cartService from '../services/cartService';
 import orderService from '../services/orderService';
 import paymentService from '../services/paymentService';
 
+const COUPON_MAP = {
+  NEON20: { discountPercent: 20, owner: 'Neon Growth Squad' },
+  KING20: { discountPercent: 20, owner: 'King Performance Media' },
+  APDH20: { discountPercent: 20, owner: 'APDH Learning Labs' },
+  THUG10: { discountPercent: 10, owner: 'Thug Conversion Studio' },
+  DARE10: { discountPercent: 10, owner: 'Dare Digital House' },
+  LEEP20: { discountPercent: 20, owner: 'LEEP Community Partners' },
+};
+
+const USER_PLATFORM_FEE_RATE = 0.02;
+
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
     if (window.Razorpay) {
@@ -68,6 +79,9 @@ const Checkout = () => {
 
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [neftReferenceNumber, setNeftReferenceNumber] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCouponCode, setAppliedCouponCode] = useState('');
+  const [couponError, setCouponError] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -98,6 +112,7 @@ const Checkout = () => {
         },
         paymentMethod: 'neft',
         neftReferenceNumber: neftReferenceNumber,
+        couponCode: appliedCouponCode,
       };
 
       const checkoutRes = await orderService.checkout(checkoutPayload, token);
@@ -123,7 +138,9 @@ const Checkout = () => {
         throw new Error('Razorpay SDK failed to load. Are you online?');
       }
 
-      const orderData = await paymentService.createOrder(token);
+      const orderData = await paymentService.createOrder(token, {
+        couponCode: appliedCouponCode,
+      });
       setPaymentStatus('Awaiting payment completion...');
 
       const options = {
@@ -164,6 +181,7 @@ const Checkout = () => {
               razorpayPaymentId: response.razorpay_payment_id,
               razorpayOrderId: response.razorpay_order_id,
               razorpaySignature: response.razorpay_signature,
+              couponCode: appliedCouponCode,
             };
             const checkoutRes = await orderService.checkout(checkoutPayload, token);
             await cartService.clearCart(token);
@@ -205,7 +223,32 @@ const Checkout = () => {
     }
   };
 
-  const orderTotal = cart?.items?.reduce((total, item) => total + (item.price * item.quantity), 0) || 0;
+  const subtotal =
+    cart?.items?.reduce((total, item) => total + item.price * item.quantity, 0) || 0;
+  const appliedCoupon = COUPON_MAP[appliedCouponCode] || null;
+  const couponDiscountAmount = appliedCoupon
+    ? Number(((subtotal * appliedCoupon.discountPercent) / 100).toFixed(2))
+    : 0;
+  const discountedSubtotal = Number((subtotal - couponDiscountAmount).toFixed(2));
+  const userPlatformFee = Number((discountedSubtotal * USER_PLATFORM_FEE_RATE).toFixed(2));
+  const orderTotal = Number((discountedSubtotal + userPlatformFee).toFixed(2));
+
+  const handleApplyCoupon = () => {
+    const normalizedCode = String(couponCode || '').trim().toUpperCase();
+    if (!normalizedCode) {
+      setAppliedCouponCode('');
+      setCouponError('');
+      return;
+    }
+
+    if (!COUPON_MAP[normalizedCode]) {
+      setCouponError('Invalid coupon code. Please check and try again.');
+      return;
+    }
+
+    setAppliedCouponCode(normalizedCode);
+    setCouponError('');
+  };
 
   return (
     <div>
@@ -345,7 +388,7 @@ const Checkout = () => {
                         name="city"
                         value={formData.city}
                         onChange={handleInputChange}
-                        placeholder="New York"
+                        placeholder="Bengaluru"
                         required
                       />
                     </div>
@@ -359,7 +402,7 @@ const Checkout = () => {
                         name="stateZip"
                         value={formData.stateZip}
                         onChange={handleInputChange}
-                        placeholder="NY 10001"
+                        placeholder="Karnataka 560001"
                         required
                       />
                     </div>
@@ -412,6 +455,34 @@ const Checkout = () => {
                     <span className="font-bold text-sm">Bank Transfer</span>
                     <span className="text-xs text-slate-500">(NEFT)</span>
                   </button>
+                </div>
+
+                <div className="mb-6 rounded-lg border border-white/10 bg-black/20 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-white">Coupon Code</h3>
+                    {appliedCoupon && (
+                      <span className="text-xs text-emerald-300">
+                        {appliedCoupon.discountPercent}% off applied
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="Enter coupon code"
+                      className="flex-1 rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-sm text-white outline-none focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  {couponError && <p className="mt-2 text-xs text-red-300">{couponError}</p>}
                 </div>
 
                 {paymentMethod === 'neft' && (
@@ -508,6 +579,18 @@ const Checkout = () => {
                 )}
 
                 <div className="mb-8 space-y-3">
+                  <div className="flex items-center justify-between text-sm text-slate-400">
+                    <span>Subtotal</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-emerald-300">
+                    <span>Coupon Discount {appliedCoupon ? `(${appliedCouponCode})` : ''}</span>
+                    <span>-₹{couponDiscountAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-amber-300">
+                    <span>User Platform Fee (2%)</span>
+                    <span>₹{userPlatformFee.toFixed(2)}</span>
+                  </div>
                   <div className="flex items-center justify-between pt-4">
                     <span className="text-xl font-bold text-white">Total</span>
                     <span className="text-3xl font-black text-primary">₹{orderTotal.toFixed(2)}</span>

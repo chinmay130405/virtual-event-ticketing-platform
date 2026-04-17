@@ -34,32 +34,32 @@ const NewsletterSignup = () => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-3 sm:flex-row">
+    <div className="w-full">
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-3">
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email"
-          className="flex-1 rounded-full border border-white/20 bg-white/5 px-6 py-3 text-white placeholder-gray-400 backdrop-blur-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full min-w-0 rounded-full border border-white/20 bg-white/5 px-6 py-3 text-white placeholder-gray-400 backdrop-blur-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           disabled={status === 'loading'}
         />
         <button
           type="submit"
           disabled={status === 'loading'}
-          className="rounded-full bg-primary px-8 py-3 font-bold text-white transition-all hover:bg-primary/90 disabled:opacity-50"
+          className="w-full rounded-full bg-primary px-6 py-3 font-bold text-white transition-all hover:bg-primary/90 disabled:opacity-50"
         >
           {status === 'loading' ? 'Subscribing...' : 'Subscribe'}
         </button>
       </form>
       
       {message && (
-        <p className={`text-sm ${status === 'success' ? 'text-green-400' : status === 'error' ? 'text-red-400' : 'text-gray-400'}`}>
+        <p className={`mt-3 text-sm ${status === 'success' ? 'text-green-400' : status === 'error' ? 'text-red-400' : 'text-gray-400'}`}>
           {message}
         </p>
       )}
       
-      <p className="text-xs text-gray-500">
+      <p className="mt-2 text-xs text-gray-500">
         We respect your privacy. Unsubscribe anytime.
       </p>
     </div>
