@@ -86,6 +86,7 @@ const startServer = async () => {
   app.use('/api/inventory', require('./routes/inventory'));
   app.use('/api/support', require('./routes/support'));
   app.use('/api/crm', require('./routes/crm'));
+  app.use('/api/scm', require('./routes/scm'));
   app.use('/api/erp', require('./routes/erp'));
   app.use('/api/marketing', require('./routes/marketing'));
 

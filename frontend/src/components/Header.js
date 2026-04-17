@@ -10,6 +10,7 @@ const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const isAdminUser = user?.role === 'admin';
   const isOrganizerUser = user?.role === 'organizer';
+  const isClientUser = user?.role === 'client';
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -53,6 +54,13 @@ const Header = () => {
             >
               Organizer Dashboard
             </Link>
+          ) : isClientUser ? (
+            <Link
+              to="/client/events"
+              className="text-sm font-medium uppercase tracking-wider text-primary transition-colors hover:text-primary/80"
+            >
+              Client Event Manager
+            </Link>
           ) : (
             <>
               <Link
@@ -67,14 +75,14 @@ const Header = () => {
               >
                 Contact
               </Link>
+              <Link
+                to="/create-event"
+                className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+              >
+                Create Event
+              </Link>
               {isAuthenticated && (
                 <>
-                  <Link
-                    to="/cart"
-                    className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
-                  >
-                    Cart
-                  </Link>
                   <Link
                     to="/my-tickets"
                     className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
@@ -96,6 +104,14 @@ const Header = () => {
         <div className="hidden items-center gap-4 md:flex">
           {isAuthenticated ? (
             <>
+              <Link
+                to="/cart"
+                className="inline-flex size-9 items-center justify-center rounded-full border border-white/20 text-slate-300 transition-all hover:border-primary/50 hover:text-primary"
+                aria-label="Cart"
+                title="Cart"
+              >
+                <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
+              </Link>
               <span className="max-w-40 truncate text-sm text-slate-300">{user?.name}</span>
               <button
                 onClick={handleLogout}
@@ -142,6 +158,14 @@ const Header = () => {
               >
                 Organizer Dashboard
               </Link>
+            ) : isClientUser ? (
+              <Link
+                to="/client/events"
+                className="text-sm font-medium uppercase tracking-wider text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Client Event Manager
+              </Link>
             ) : (
               <>
                 <Link
@@ -157,6 +181,13 @@ const Header = () => {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Contact
+                </Link>
+                <Link
+                  to="/create-event"
+                  className="text-sm font-medium uppercase tracking-wider text-slate-300 transition-colors hover:text-primary"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Create Event
                 </Link>
                 {isAuthenticated && (
                   <>

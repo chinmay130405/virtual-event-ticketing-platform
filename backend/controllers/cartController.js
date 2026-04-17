@@ -7,6 +7,12 @@ const Cart = require('../models/Cart');
 const Event = require('../models/Event');
 const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
 
+const getEffectiveEventPrice = (event) => {
+  const basePrice = Math.max(0, Number(event?.price) || 0);
+  const discountPercent = Math.min(80, Math.max(0, Number(event?.discountPercent) || 0));
+  return Number((basePrice * (1 - discountPercent / 100)).toFixed(2));
+};
+
 /**
  * Get user's cart
  * GET /api/cart
@@ -98,7 +104,7 @@ exports.addToCart = async (req, res, next) => {
       cart.items.push({
         event: eventId,
         quantity,
-        price: event.price,
+        price: getEffectiveEventPrice(event),
       });
     }
 

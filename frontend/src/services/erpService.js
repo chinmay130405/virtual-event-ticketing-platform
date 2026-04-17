@@ -79,6 +79,11 @@ export const erpService = {
     const response = await api.get('/finances/chart', { params });
     return response.data;
   },
+
+  getInsights: async () => {
+    const response = await api.get('/insights');
+    return response.data;
+  },
 };
 
 export default erpService;

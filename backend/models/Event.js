@@ -32,6 +32,12 @@ const eventSchema = new mongoose.Schema(
       required: [true, 'Please provide ticket price'],
       min: [0, 'Price cannot be negative'],
     },
+    discountPercent: {
+      type: Number,
+      min: [0, 'Discount cannot be negative'],
+      max: [80, 'Discount cannot exceed 80%'],
+      default: 0,
+    },
     ticketsAvailable: {
       type: Number,
       required: [true, 'Please provide number of tickets'],
@@ -68,14 +74,75 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: 'Online',
     },
+    eventMode: {
+      type: String,
+      enum: ['online', 'in-person', 'hybrid'],
+      default: 'in-person',
+    },
     speaker: {
       type: String,
       default: '',
+    },
+    venueDescription: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Venue description cannot exceed 1000 characters'],
+      default: '',
+    },
+    organizerName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    isHighlighted: {
+      type: Boolean,
+      default: false,
+    },
+    highlightWeeks: {
+      type: Number,
+      min: [0, 'Highlight weeks cannot be negative'],
+      max: [52, 'Highlight weeks cannot exceed 52'],
+      default: 0,
+    },
+    highlightUntil: {
+      type: Date,
+      default: null,
+    },
+    highlightFeePaid: {
+      type: Number,
+      min: [0, 'Highlight fee cannot be negative'],
+      default: 0,
+    },
+    platformFeeRate: {
+      type: Number,
+      min: 0,
+      max: 1,
+      default: 0.3,
     },
     status: {
       type: String,
       enum: ['draft', 'published', 'completed', 'cancelled'],
       default: 'draft',
+    },
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'approved',
+    },
+    approvalComment: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Approval comment cannot exceed 500 characters'],
+      default: '',
+    },
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
     budget: {
       type: Number,

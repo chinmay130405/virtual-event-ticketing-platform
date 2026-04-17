@@ -1,4 +1,4 @@
-const VALID_ROLES = new Set(['user', 'organizer', 'admin']);
+const VALID_ROLES = new Set(['user', 'organizer', 'admin', 'client']);
 
 const normalizeRole = (role) => {
   if (VALID_ROLES.has(role)) {
@@ -28,7 +28,7 @@ const hasAnyRole = (user, allowedRoles = []) => {
 
 const getPublicRegistrationRole = (requestedRole) => {
   const role = normalizeRole(requestedRole);
-  return role === 'admin' || role === 'organizer' ? 'user' : role;
+  return role === 'admin' || role === 'organizer' || role === 'client' ? 'user' : role;
 };
 
 module.exports = {

@@ -161,6 +161,43 @@ const adminService = {
       throw error.response?.data || error.message;
     }
   },
+
+  getPendingEventSubmissions: async (token) => {
+    try {
+      const response = await axios.get(`${API_URL}/events/submissions/pending`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getRecentPaymentVerifications: async (token) => {
+    try {
+      const response = await axios.get(`${API_URL}/payments/recent-verifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  verifyEventSubmission: async (eventId, approvalStatus, comment, token) => {
+    try {
+      const response = await axios.put(
+        `/api/events/${eventId}/verify`,
+        { approvalStatus, comment },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default adminService;

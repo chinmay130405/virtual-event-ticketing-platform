@@ -9,9 +9,9 @@ const API_URL = '/api/payments';
 
 const paymentService = {
   // Create a new Razorpay order
-  createOrder: async (token) => {
+  createOrder: async (token, payload = {}) => {
     try {
-      const response = await axios.post(`${API_URL}/create-order`, {}, {
+      const response = await axios.post(`${API_URL}/create-order`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

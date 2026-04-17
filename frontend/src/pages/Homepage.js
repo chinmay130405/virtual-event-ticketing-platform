@@ -3,32 +3,23 @@ import { Link } from 'react-router-dom';
 import eventService from '../services/eventService';
 import SEO from '../components/SEO';
 
-const CATEGORY_ICONS = {
-  Music: 'music_note',
-  Technology: 'memory',
-  Sports: 'sports_kabaddi',
-  Comedy: 'mood',
-  Art: 'palette',
-  Theater: 'theater_comedy',
-  Workshop: 'build',
-  Conference: 'groups',
-  Gaming: 'sports_esports',
-  Networking: 'handshake',
-};
+const TECH_TRACKS = [
+  { label: 'Frontend Engineering', icon: 'web' },
+  { label: 'Backend & APIs', icon: 'dns' },
+  { label: 'Cloud & DevOps', icon: 'cloud' },
+  { label: 'AI & Automation', icon: 'auto_awesome' },
+  { label: 'Security Engineering', icon: 'shield_lock' },
+  { label: 'Data & Performance', icon: 'monitoring' },
+];
 
 const Homepage = () => {
   const [featuredEvents, setFeaturedEvents] = useState([]);
-  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [eventsRes, catRes] = await Promise.all([
-          eventService.getAllEvents({ sortBy: 'date_asc' }),
-          eventService.getCategories(),
-        ]);
+        const eventsRes = await eventService.getAllEvents({ sortBy: 'date_asc' });
         setFeaturedEvents(eventsRes.events?.slice(0, 3) || []);
-        setCategories(catRes.categories || []);
       } catch (err) {
         console.error('Error fetching homepage data:', err);
       }
@@ -36,7 +27,6 @@ const Homepage = () => {
     fetchData();
   }, []);
 
-  const defaultCategories = ['Music', 'Tech', 'Sports', 'Comedy', 'Art', 'Theater'];
   const featuredEvent = featuredEvents[0];
 
   return (
@@ -86,31 +76,18 @@ const Homepage = () => {
             <h2 className="text-4xl font-bold">Find Your Vibe</h2>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-            {categories.length > 0
-              ? categories.map((cat) => (
-                  <Link
-                    to="/events"
-                    key={cat}
-                    className="group flex flex-col items-center gap-4 rounded-2xl border border-white/5 bg-surface p-8 transition-all hover:-translate-y-1 hover:border-primary/50"
-                  >
-                    <span className="material-symbols-outlined text-3xl text-primary transition-transform group-hover:scale-110">
-                      {CATEGORY_ICONS[cat] || 'celebration'}
-                    </span>
-                    <span className="text-sm font-bold text-slate-300">{cat}</span>
-                  </Link>
-                ))
-              : defaultCategories.map((cat) => (
-                  <Link
-                    to="/events"
-                    key={cat}
-                    className="group flex flex-col items-center gap-4 rounded-2xl border border-white/5 bg-surface p-8 transition-all hover:-translate-y-1 hover:border-primary/50"
-                  >
-                    <span className="material-symbols-outlined text-3xl text-primary transition-transform group-hover:scale-110">
-                      {CATEGORY_ICONS[cat] || 'celebration'}
-                    </span>
-                    <span className="text-sm font-bold text-slate-300">{cat}</span>
-                  </Link>
-                ))}
+            {TECH_TRACKS.map((track) => (
+              <Link
+                to="/events"
+                key={track.label}
+                className="group flex flex-col items-center gap-4 rounded-2xl border border-white/5 bg-surface p-8 transition-all hover:-translate-y-1 hover:border-primary/50"
+              >
+                <span className="material-symbols-outlined text-3xl text-primary transition-transform group-hover:scale-110">
+                  {track.icon}
+                </span>
+                <span className="text-sm font-bold text-slate-300">{track.label}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

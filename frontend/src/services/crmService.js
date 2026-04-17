@@ -65,6 +65,11 @@ export const crmService = {
     return response.data;
   },
 
+  getInsights: async () => {
+    const response = await api.get('/insights');
+    return response.data;
+  },
+
   createCampaign: async (data) => {
     const response = await api.post('/campaigns', data);
     return response.data;

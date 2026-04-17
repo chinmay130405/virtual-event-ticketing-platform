@@ -92,8 +92,8 @@ const Contact = () => {
               <span className="material-symbols-outlined text-3xl text-primary">call</span>
             </div>
             <h3 className="mb-2 text-xl font-bold text-white">Call Us</h3>
-            <p className="mb-1 font-medium text-primary">+1 (800) 555-VIBE</p>
-            <p className="text-sm text-slate-500">Mon-Fri, 9AM-6PM EST</p>
+            <p className="mb-1 font-medium text-primary">+91 80 4567 8901</p>
+            <p className="text-sm text-slate-500">Mon-Fri, 9AM-6PM IST</p>
           </div>
         </section>
 
@@ -228,14 +228,14 @@ const Contact = () => {
             <div className="flex flex-col justify-center p-10">
               <h2 className="mb-4 text-3xl font-bold text-white">Our Office</h2>
               <p className="mb-8 max-w-sm text-slate-400">
-                Prefer meeting in person? Our support team is available at our New York
+                Prefer meeting in person? Our support team is available at our Bengaluru
                 headquarters for scheduled consultations.
               </p>
               <div className="mb-10 flex items-start gap-4">
                 <span className="material-symbols-outlined text-primary">location_on</span>
                 <div>
-                  <p className="font-semibold text-white">123 Event Street</p>
-                  <p className="text-slate-500">New York, NY 10001</p>
+                  <p className="font-semibold text-white">12 MG Road</p>
+                  <p className="text-slate-500">Bengaluru, Karnataka 560001</p>
                 </div>
               </div>
 

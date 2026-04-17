@@ -3,9 +3,17 @@ const crypto = require('crypto');
 const Cart = require('../models/Cart');
 const User = require('../models/User');
 const { getTicketMetricsByEventIds } = require('../utils/ticketInventory');
+const { calculateCheckoutPricing } = require('../utils/coupons');
+
+const getEffectiveEventPrice = (event) => {
+  const basePrice = Math.max(0, Number(event?.price) || 0);
+  const discountPercent = Math.min(80, Math.max(0, Number(event?.discountPercent) || 0));
+  return Number((basePrice * (1 - discountPercent / 100)).toFixed(2));
+};
 
 exports.createOrder = async (req, res, next) => {
   try {
+    const { couponCode } = req.body;
     const { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } = process.env;
 
     if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
@@ -24,7 +32,7 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
-    let totalAmount = 0;
+  let subtotalAmount = 0;
     const eventIds = cart.items.map((item) => String(item.event._id));
     const metricsByEvent = await getTicketMetricsByEventIds(eventIds);
 
@@ -47,10 +55,12 @@ exports.createOrder = async (req, res, next) => {
         });
       }
 
-      totalAmount += item.event.price * item.quantity;
+      subtotalAmount += getEffectiveEventPrice(item.event) * item.quantity;
     }
 
-    const amountInPaise = Math.round(totalAmount * 100);
+    const pricing = calculateCheckoutPricing({ subtotal: subtotalAmount, couponCode });
+
+    const amountInPaise = Math.round(pricing.payableAmount * 100);
 
     if (amountInPaise <= 0) {
       return res.status(400).json({
@@ -85,6 +95,7 @@ exports.createOrder = async (req, res, next) => {
       amount: amountInPaise,
       currency: 'INR',
       keyId: RAZORPAY_KEY_ID,
+      pricing,
     });
   } catch (error) {
     next(error);

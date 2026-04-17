@@ -46,6 +46,30 @@ const eventService = {
     }
   },
 
+  // Get current user's submitted events
+  getMySubmissions: async (token) => {
+    try {
+      const response = await axios.get(`${API_URL}/my-submissions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Verify submitted event (Admin)
+  verifySubmission: async (id, payload, token) => {
+    try {
+      const response = await axios.put(`${API_URL}/${id}/verify`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Update event (Admin)
   updateEvent: async (id, eventData, token) => {
     try {
